@@ -58,9 +58,17 @@ describe('determinism', () => {
 });
 
 describe('fire behaviour', () => {
-  it('an unfought 2026 fire burns a meaningful area', () => {
+  it('unfought 2026 fires burn a meaningful area — but not the whole valley', () => {
     const s = run(42, seasons[0]!.seasonLen + 100);
-    expect(s.stats.hectaresBurnt).toBeGreaterThan(10);
+    expect(s.stats.hectaresBurnt).toBeGreaterThan(150);
+    expect(s.stats.hectaresBurnt).toBeLessThan(1200);
+  });
+
+  it('unfought 2026 fires rarely die on their own before mattering (multi-seed)', () => {
+    for (const seed of [7, 99, 555]) {
+      const s = run(seed, seasons[0]!.seasonLen + 100);
+      expect(s.stats.hectaresBurnt).toBeGreaterThan(100);
+    }
   });
 
   it('dryness is the master lever: drier seasons burn more (same seed, do-nothing)', () => {
@@ -105,33 +113,55 @@ describe('season lifecycle', () => {
 });
 
 describe('trucks', () => {
-  it('an ordered truck moves and fights the fire, reducing burnt area vs. do-nothing', () => {
-    const idle = run(42, seasons[0]!.seasonLen + 100);
-
-    const fought = createSeason(42, 0);
-    for (let i = 0; i < seasons[0]!.seasonLen + 100 && !fought.ended; i++) {
-      const cmds: Command[] = [];
-      if (i % 10 === 0) {
-        // Naive bot: send both trucks toward the nearest burning cell.
-        for (const t of fought.trucks) {
-          if (t.path.length > 0) continue;
+  it('naive firefighting beats doing nothing (tuning invariant, multi-seed)', () => {
+    // Naive bot: each idle engine takes its own nearest detected fire; engines
+    // already travelling or fighting an adjacent fire are left alone.
+    function runBot(seed: number): number {
+      const s = createSeason(seed, 0);
+      for (let i = 0; i < seasons[0]!.seasonLen + 200 && !s.ended; i++) {
+        const cmds: Command[] = [];
+        const taken = new Set<string>();
+        for (const t of s.trucks) {
+          if (t.path.length > 0 || t.water < 6) continue;
+          let busy = false;
+          for (let dy = -1; dy <= 1 && !busy; dy++)
+            for (let dx = -1; dx <= 1; dx++) {
+              const nx = t.x + dx;
+              const ny = t.y + dy;
+              if (
+                nx >= 0 &&
+                ny >= 0 &&
+                nx < s.w &&
+                ny < s.h &&
+                s.grid[ny * s.w + nx]!.state === 'burning'
+              ) {
+                busy = true;
+                break;
+              }
+            }
+          if (busy) continue;
           let best: { x: number; y: number; d: number } | null = null;
-          for (let y = 0; y < fought.h; y++)
-            for (let x = 0; x < fought.w; x++) {
-              const c = fought.grid[y * fought.w + x]!;
-              if (c.state !== 'burning') continue;
+          for (let y = 0; y < s.h; y++)
+            for (let x = 0; x < s.w; x++) {
+              const c = s.grid[y * s.w + x]!;
+              if (c.state !== 'burning' || !c.detected || taken.has(`${x},${y}`)) continue;
               const d = Math.abs(x - t.x) + Math.abs(y - t.y);
               if (!best || d < best.d) best = { x, y, d };
             }
-          if (best && best.d > 1) {
-            const tx = best.x + (t.x < best.x ? -1 : 1);
-            cmds.push({ type: 'dispatch', truckId: t.id, x: tx, y: best.y });
+          if (best) {
+            taken.add(`${best.x},${best.y}`);
+            cmds.push({ type: 'dispatch', truckId: t.id, x: best.x, y: best.y });
           }
         }
+        step(s, cmds);
       }
-      step(fought, cmds);
+      return s.stats.hectaresBurnt;
     }
-    expect(fought.stats.hectaresBurnt).toBeLessThan(idle.stats.hectaresBurnt);
+
+    for (const seed of [42, 7, 555]) {
+      const idle = run(seed, seasons[0]!.seasonLen + 200);
+      expect(runBot(seed)).toBeLessThan(idle.stats.hectaresBurnt);
+    }
   });
 
   it('trucks refill at the station', () => {

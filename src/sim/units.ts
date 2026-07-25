@@ -63,21 +63,42 @@ export function findPath(s: GameState, from: Point, to: Point): Point[] {
   return path;
 }
 
-/** Reachable path to (x,y), falling back to the best-reachable Moore neighbour (e.g. a water click). */
-function pathToOrNear(s: GameState, from: Point, x: number, y: number): Point[] {
-  const direct = findPath(s, from, { x, y });
-  if (direct.length > 0 || (from.x === x && from.y === y)) return direct;
+/** Best path to a Moore neighbour of (x,y), preferring non-burning stands. */
+function pathAdjacentTo(s: GameState, from: Point, x: number, y: number): Point[] {
   let best: Point[] = [];
+  let bestBurning = true;
   for (let dy = -1; dy <= 1; dy++)
     for (let dx = -1; dx <= 1; dx++) {
       if (dx === 0 && dy === 0) continue;
       const nx = x + dx;
       const ny = y + dy;
       if (!inBounds(s, nx, ny)) continue;
+      if (from.x === nx && from.y === ny) return []; // already adjacent
+      const burning = cellAt(s, nx, ny).state === 'burning';
       const p = findPath(s, from, { x: nx, y: ny });
-      if (p.length > 0 && (best.length === 0 || p.length < best.length)) best = p;
+      if (p.length === 0) continue;
+      const better =
+        best.length === 0 ||
+        (bestBurning && !burning) ||
+        (burning === bestBurning && p.length < best.length);
+      if (better) {
+        best = p;
+        bestBurning = burning;
+      }
     }
   return best;
+}
+
+/**
+ * Reachable path to (x,y). A burning target routes to its edge — engines fight
+ * fire from adjacent tiles, they don't park in it. Unreachable targets (water)
+ * fall back to the best-reachable neighbour.
+ */
+function pathToOrNear(s: GameState, from: Point, x: number, y: number): Point[] {
+  if (cellAt(s, x, y).state === 'burning') return pathAdjacentTo(s, from, x, y);
+  const direct = findPath(s, from, { x, y });
+  if (direct.length > 0 || (from.x === x && from.y === y)) return direct;
+  return pathAdjacentTo(s, from, x, y);
 }
 
 /**
@@ -143,6 +164,7 @@ function adjacentToWaterOrStation(s: GameState, t: Truck): boolean {
 /** One tick of truck behaviour: move along ordered path, else fight adjacent fire, else refill. */
 export function updateTrucks(s: GameState): void {
   for (const t of s.trucks) {
+    t.trail = [{ x: t.x, y: t.y }];
     if (t.path.length > 0) {
       const speed = T.moveSpeed[cellAt(s, t.x, t.y).type] || 0.75;
       t.movePoints += speed;
@@ -150,6 +172,7 @@ export function updateTrucks(s: GameState): void {
         const next = t.path.shift()!;
         t.x = next.x;
         t.y = next.y;
+        t.trail.push({ x: next.x, y: next.y });
         t.movePoints -= 1;
       }
       if (t.path.length === 0) t.target = null;
@@ -157,6 +180,21 @@ export function updateTrucks(s: GameState): void {
     }
     t.movePoints = 0;
     t.target = null;
+
+    // An engine standing in fire fights its own tile first.
+    const own = cellAt(s, t.x, t.y);
+    if (own.state === 'burning' && t.water > 0) {
+      own.intensity -= T.extinguishPerTick;
+      t.water -= 1;
+      if (own.intensity <= 0) {
+        own.state = 'unburnt';
+        own.intensity = 0;
+        own.wetTimer = T.wetTimerOnExtinguish;
+        own.detected = false;
+        own.igniteAge = 0;
+      }
+      continue;
+    }
 
     const target = t.water > 0 ? adjacentBurning(s, t) : null;
     if (target) {

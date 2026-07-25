@@ -2,9 +2,13 @@ import { TICK_MS } from '../sim/balance';
 import type { Command, GameEvent, GameState } from '../sim/state';
 import { step } from '../sim/step';
 
-/** Fixed-timestep accumulator loop: sim at 2 Hz, render at display rate. */
+/**
+ * Fixed-timestep accumulator loop: sim at 2 Hz, render at display rate.
+ * Each frame receives alpha ∈ [0,1] — progress through the current tick —
+ * so the renderer can interpolate sprite motion between sim states.
+ */
 export class GameLoop {
-  speed = 1; // 0 = paused, 1, 2
+  speed = 1; // 0 = paused, 1 = playing
   private acc = 0;
   private last = 0;
   private queue: Command[] = [];
@@ -12,7 +16,7 @@ export class GameLoop {
   constructor(
     private state: GameState,
     private onEvents: (events: GameEvent[]) => void,
-    private onFrame: () => void,
+    private onFrame: (alpha: number) => void,
   ) {}
 
   setState(state: GameState): void {
@@ -37,7 +41,7 @@ export class GameLoop {
         this.acc -= TICK_MS;
       }
       if (this.acc > TICK_MS * 8) this.acc = 0;
-      this.onFrame();
+      this.onFrame(Math.min(1, this.acc / TICK_MS));
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);

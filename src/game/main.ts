@@ -19,8 +19,8 @@ const hud = new Hud(state, togglePin);
 const loop = new GameLoop(
   state,
   (events) => hud.handle(events),
-  () => {
-    renderer.draw(pinnedTruckId);
+  (alpha) => {
+    renderer.draw(pinnedTruckId, alpha);
     hud.update(pinnedTruckId);
   },
 );
@@ -61,27 +61,22 @@ canvas.addEventListener('contextmenu', (ev) => {
 // --- Time controls ---------------------------------------------------------
 
 const btnPause = document.getElementById('btn-pause') as HTMLButtonElement;
-const btn1x = document.getElementById('btn-1x') as HTMLButtonElement;
-const btn2x = document.getElementById('btn-2x') as HTMLButtonElement;
+const btnPlay = document.getElementById('btn-play') as HTMLButtonElement;
 
 function setSpeed(speed: number): void {
   loop.speed = speed;
   btnPause.classList.toggle('active', speed === 0);
-  btn1x.classList.toggle('active', speed === 1);
-  btn2x.classList.toggle('active', speed === 2);
+  btnPlay.classList.toggle('active', speed === 1);
 }
 
 btnPause.addEventListener('click', () => setSpeed(0));
-btn1x.addEventListener('click', () => setSpeed(1));
-btn2x.addEventListener('click', () => setSpeed(2));
+btnPlay.addEventListener('click', () => setSpeed(1));
 
 document.addEventListener('keydown', (ev) => {
   if (ev.key === ' ') {
     ev.preventDefault();
     setSpeed(loop.speed === 0 ? 1 : 0);
-  } else if (ev.key === '1') setSpeed(1);
-  else if (ev.key === '2') setSpeed(2);
-  else if (ev.key === 'Escape') pinnedTruckId = null;
+  } else if (ev.key === 'Escape') pinnedTruckId = null;
 });
 
 document.addEventListener('visibilitychange', () => {

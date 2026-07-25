@@ -45,6 +45,8 @@ export interface Truck {
   movePoints: number;
   /** Ordered destination while en route; null when idle/arrived. */
   target: Point | null;
+  /** Tiles traversed during the last tick (first = start, last = current) — the renderer interpolates along it. */
+  trail: Point[];
 }
 
 export interface Wind {

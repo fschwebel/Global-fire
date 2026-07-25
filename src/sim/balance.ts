@@ -25,14 +25,18 @@ export const spread = {
   moistureSlope: 1.05,
   windClampMin: 0.15,
   intensityDiv: 6,
-  intensityMin: 0.4,
+  // Floor high enough that young fires creep rather than gutter out —
+  // unfought fires should rarely die on their own.
+  intensityMin: 0.55,
   intensityMax: 1.4,
   diagFactor: 0.7,
   wetFactor: 0.1,
 };
 
 export const burn = {
-  fuel: { dense: 8, sparse: 5, grass: 2, house: 6 } as Partial<Record<TileType, number>>,
+  // Grass/sparse burn a little long for realism so young fires linger and
+  // creep instead of guttering out — the player must act, fires rarely die alone.
+  fuel: { dense: 8, sparse: 6, grass: 3, house: 6 } as Partial<Record<TileType, number>>,
   intensityCap: { dense: 9, sparse: 6, grass: 4, house: 7 } as Partial<Record<TileType, number>>,
 };
 
@@ -53,10 +57,10 @@ export const truck = {
     rock: 0.75,
     water: 0,
   } satisfies Record<TileType, number>,
-  extinguishPerTick: 3, // intensity removed per tick (cell regrows +1 → net −2)
+  extinguishPerTick: 4, // intensity removed per tick (cell regrows +1 → net −3)
   waterCapacity: 24,
   refillPerTick: 4,
-  wetTimerOnExtinguish: 20,
+  wetTimerOnExtinguish: 40, // fought ground holds — player work must visibly stick
   crew: 4,
 };
 
@@ -98,9 +102,9 @@ export const seasons: SeasonParams[] = [
   {
     year: 2026,
     t: 0,
-    dryness: 0.3,
+    dryness: 0.32,
     windStr: 0.2,
-    scriptedIgnitions: 1,
+    scriptedIgnitions: 3,
     randomIgnitionRate: 0,
     seasonLen: 300,
     reliefRain: 'guaranteed',
@@ -110,7 +114,7 @@ export const seasons: SeasonParams[] = [
     t: 1,
     dryness: 0.38,
     windStr: 0.3,
-    scriptedIgnitions: 1,
+    scriptedIgnitions: 3,
     randomIgnitionRate: 0,
     seasonLen: 300,
     reliefRain: 'guaranteed',
@@ -120,7 +124,7 @@ export const seasons: SeasonParams[] = [
     t: 2,
     dryness: 0.44,
     windStr: 0.4,
-    scriptedIgnitions: 2,
+    scriptedIgnitions: 4,
     randomIgnitionRate: 0,
     seasonLen: 320,
     reliefRain: 'guaranteed',
@@ -130,7 +134,7 @@ export const seasons: SeasonParams[] = [
     t: 3,
     dryness: 0.5,
     windStr: 0.5,
-    scriptedIgnitions: 2,
+    scriptedIgnitions: 4,
     randomIgnitionRate: 0.001,
     seasonLen: 320,
     reliefRain: 'half',
@@ -140,7 +144,7 @@ export const seasons: SeasonParams[] = [
     t: 4,
     dryness: 0.56,
     windStr: 0.7,
-    scriptedIgnitions: 2,
+    scriptedIgnitions: 4,
     randomIgnitionRate: 0.002,
     seasonLen: 340,
     reliefRain: 'half',
@@ -150,7 +154,7 @@ export const seasons: SeasonParams[] = [
     t: 5,
     dryness: 0.62,
     windStr: 0.8,
-    scriptedIgnitions: 3,
+    scriptedIgnitions: 5,
     randomIgnitionRate: 0.002,
     seasonLen: 360,
     reliefRain: 'half',
@@ -160,7 +164,7 @@ export const seasons: SeasonParams[] = [
     t: 6,
     dryness: 0.68,
     windStr: 0.9,
-    scriptedIgnitions: 3,
+    scriptedIgnitions: 5,
     randomIgnitionRate: 0.003,
     seasonLen: 380,
     reliefRain: 'half',
@@ -170,7 +174,7 @@ export const seasons: SeasonParams[] = [
     t: 7,
     dryness: 0.74,
     windStr: 1.1,
-    scriptedIgnitions: 3,
+    scriptedIgnitions: 5,
     randomIgnitionRate: 0.003,
     seasonLen: 400,
     reliefRain: 'none',
@@ -180,7 +184,7 @@ export const seasons: SeasonParams[] = [
     t: 8,
     dryness: 0.79,
     windStr: 1.2,
-    scriptedIgnitions: 4,
+    scriptedIgnitions: 5,
     randomIgnitionRate: 0.004,
     seasonLen: 400,
     reliefRain: 'none',
@@ -190,7 +194,7 @@ export const seasons: SeasonParams[] = [
     t: 9,
     dryness: 0.85,
     windStr: 1.4,
-    scriptedIgnitions: 4,
+    scriptedIgnitions: 6,
     randomIgnitionRate: 0.004,
     seasonLen: 420,
     reliefRain: 'none',

@@ -159,6 +159,49 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
   const params = seasons[seasonIndex]!;
   const script: SeasonScript = { ignitions: [], windShifts: [], reliefRains: [] };
 
+  // Connected flammable components (grass/sparse/dense): a fire only matters
+  // if its site can reach a real fuel mass, not a pocket boxed in by barriers.
+  const comp = new Int32Array(s.w * s.h).fill(-1);
+  const compSize: number[] = [];
+  for (let start = 0; start < s.w * s.h; start++) {
+    const cell = s.grid[start]!;
+    if (
+      comp[start] !== -1 ||
+      (cell.type !== 'grass' && cell.type !== 'sparse' && cell.type !== 'dense')
+    )
+      continue;
+    const id = compSize.length;
+    let size = 0;
+    const stack = [start];
+    comp[start] = id;
+    while (stack.length > 0) {
+      const cur = stack.pop()!;
+      size++;
+      const cx = cur % s.w;
+      const cy = Math.floor(cur / s.w);
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const) {
+        const nx = cx + dx;
+        const ny = cy + dy;
+        if (!inBounds(s, nx, ny)) continue;
+        const ni = ny * s.w + nx;
+        const nc = s.grid[ni]!;
+        if (
+          comp[ni] === -1 &&
+          (nc.type === 'grass' || nc.type === 'sparse' || nc.type === 'dense')
+        ) {
+          comp[ni] = id;
+          stack.push(ni);
+        }
+      }
+    }
+    compSize.push(size);
+  }
+
   // Ignition sites: grass/sparse tiles near a road, ≥ 8 tiles from any village.
   const candidates: Point[] = [];
   for (let y = 1; y < s.h - 1; y++)
@@ -169,6 +212,20 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
       if (!farFromVillages) continue;
       // Not on the station's doorstep — the parked engines would kill it in one tick.
       if (Math.abs(s.station.x - x) + Math.abs(s.station.y - y) < 10) continue;
+      // Continuous fuel around the site, so young fires creep instead of
+      // guttering out in scraps of grass between rock and water.
+      let fuelAround = 0;
+      for (let dy = -2; dy <= 2; dy++)
+        for (let dx = -2; dx <= 2; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (!inBounds(s, nx, ny)) continue;
+          const type = s.grid[idx(s, nx, ny)]!.type;
+          if (type === 'grass' || type === 'sparse' || type === 'dense') fuelAround++;
+        }
+      if (fuelAround < 17) continue;
+      // The site's fuel mass must be large enough for the fire to matter.
+      if ((compSize[comp[idx(s, x, y)]!] ?? 0) < 150) continue;
       let nearRoad = false;
       for (let dy = -3; dy <= 3 && !nearRoad; dy++)
         for (let dx = -3; dx <= 3; dx++)
@@ -179,11 +236,23 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
       if (nearRoad) candidates.push({ x, y });
     }
 
-  for (let i = 0; i < params.scriptedIgnitions; i++) {
-    const at = candidates[Math.floor(rng() * candidates.length)] ?? { x: 5, y: 5 };
-    // Tutorial fire is called in almost immediately (tick 10 = 5 s).
-    script.ignitions.push({ tick: 10 + i * 60, x: at.x, y: at.y, done: false });
+  // Staggered ignitions in separate regions — several small fires the player
+  // must divide attention between, not one blaze. First is called in at once.
+  // Spacing relaxes gradually (12 → 8 → 4 → any) rather than being abandoned.
+  const chosen: Point[] = [];
+  for (const minDist of [12, 8, 4, 0]) {
+    let attempts = 0;
+    while (chosen.length < params.scriptedIgnitions && attempts++ < 80 && candidates.length > 0) {
+      const at = candidates[Math.floor(rng() * candidates.length)]!;
+      if (chosen.every((p) => Math.abs(p.x - at.x) + Math.abs(p.y - at.y) >= minDist))
+        chosen.push(at);
+    }
+    if (chosen.length >= params.scriptedIgnitions) break;
   }
+  while (chosen.length < params.scriptedIgnitions) chosen.push({ x: 5, y: 5 });
+  chosen.forEach((at, i) => {
+    script.ignitions.push({ tick: 10 + i * 60, x: at.x, y: at.y, done: false });
+  });
 
   script.windShifts.push({
     tick: Math.floor(params.seasonLen * 0.45),
@@ -218,26 +287,16 @@ export function createSeason(seed: number, seasonIndex = 0): GameState {
     seasonLen: params.seasonLen,
     randomIgnitionRate: params.randomIgnitionRate,
     station,
-    trucks: [
-      {
-        id: 1,
-        x: station.x,
-        y: station.y,
-        water: T.waterCapacity,
-        path: [],
-        movePoints: 0,
-        target: null,
-      },
-      {
-        id: 2,
-        x: station.x,
-        y: station.y,
-        water: T.waterCapacity,
-        path: [],
-        movePoints: 0,
-        target: null,
-      },
-    ],
+    trucks: [1, 2].map((id) => ({
+      id,
+      x: station.x,
+      y: station.y,
+      water: T.waterCapacity,
+      path: [],
+      movePoints: 0,
+      target: null,
+      trail: [{ x: station.x, y: station.y }],
+    })),
     stats: {
       hectaresBurnt: 0,
       animalsKilled: 0,

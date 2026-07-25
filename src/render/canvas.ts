@@ -1,7 +1,23 @@
-import type { GameState, TileType } from '../sim/state';
+import type { GameState, TileType, Truck } from '../sim/state';
 import { idx } from '../sim/state';
 
 export const TILE = 20;
+
+/**
+ * Pixel position of an engine, interpolated along the tiles it traversed
+ * during the current tick — engines drive corner-by-corner instead of teleporting.
+ */
+function truckPixelPos(t: Truck, alpha: number): { px: number; py: number } {
+  const trail = t.trail;
+  if (!trail || trail.length <= 1) return { px: t.x * TILE, py: t.y * TILE };
+  const segs = trail.length - 1;
+  const d = Math.min(alpha, 1) * segs;
+  const i = Math.min(Math.floor(d), segs - 1);
+  const f = d - i;
+  const a = trail[i]!;
+  const b = trail[i + 1]!;
+  return { px: (a.x + (b.x - a.x) * f) * TILE, py: (a.y + (b.y - a.y) * f) * TILE };
+}
 
 const TERRAIN: Record<TileType, string> = {
   dense: '#1b5e20',
@@ -18,6 +34,9 @@ export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private terrain: HTMLCanvasElement;
   private terrainDirty = true;
+  /** First-seen times for burning/burnt cells — drives short fade-ins. */
+  private seenBurning = new Map<number, number>();
+  private seenBurnt = new Map<number, number>();
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -36,6 +55,8 @@ export class Renderer {
   setState(state: GameState): void {
     this.state = state;
     this.terrainDirty = true;
+    this.seenBurning.clear();
+    this.seenBurnt.clear();
   }
 
   /** Bake all static tiles once; only dynamic cells draw per frame. */
@@ -61,18 +82,29 @@ export class Renderer {
     this.terrainDirty = false;
   }
 
-  draw(selectedTruckId: number | null): void {
+  draw(selectedTruckId: number | null, alpha = 1): void {
     if (this.terrainDirty) this.bakeTerrain();
     const s = this.state;
     const ctx = this.ctx;
+    const now = performance.now();
+    const frame = Math.floor(now / 130); // per-frame flicker clock, independent of sim ticks
     ctx.drawImage(this.terrain, 0, 0);
 
     for (let y = 0; y < s.h; y++)
       for (let x = 0; x < s.w; x++) {
-        const c = s.grid[idx(s, x, y)]!;
+        const i = idx(s, x, y);
+        const c = s.grid[i]!;
         const px = x * TILE;
         const py = y * TILE;
+        if (c.state !== 'burning') this.seenBurning.delete(i);
+        if (c.state !== 'burnt') this.seenBurnt.delete(i);
         if (c.state === 'burnt') {
+          let t0 = this.seenBurnt.get(i);
+          if (t0 === undefined) {
+            t0 = now;
+            this.seenBurnt.set(i, now);
+          }
+          ctx.globalAlpha = Math.min(1, (now - t0) / 600);
           ctx.fillStyle = 'rgba(30, 22, 18, 0.88)';
           ctx.fillRect(px, py, TILE, TILE);
           ctx.strokeStyle = 'rgba(80, 60, 50, 0.5)';
@@ -80,24 +112,32 @@ export class Renderer {
           ctx.moveTo(px + 2, py + 2);
           ctx.lineTo(px + TILE - 2, py + TILE - 2);
           ctx.stroke();
+          ctx.globalAlpha = 1;
         } else if (c.state === 'burning') {
+          let t0 = this.seenBurning.get(i);
+          if (t0 === undefined) {
+            t0 = now;
+            this.seenBurning.set(i, now);
+          }
+          ctx.globalAlpha = Math.min(1, (now - t0) / 350);
           if (c.detected) {
             const t = Math.min(c.intensity / 9, 1);
             const r = Math.round(211 + t * 44);
             const g = Math.round(120 - t * 70);
             ctx.fillStyle = `rgb(${r}, ${g}, 20)`;
             ctx.fillRect(px, py, TILE, TILE);
-            // Flame flicker core.
+            // Flame flicker core, animated at render rate.
             ctx.fillStyle = 'rgba(255, 220, 100, 0.8)';
-            const wob = ((x * 7 + y * 13 + s.tick) % 3) - 1;
+            const wob = ((x * 7 + y * 13 + frame) % 3) - 1;
             ctx.fillRect(px + 6 + wob, py + 4, TILE - 12, TILE - 8);
           } else {
             // Undetected: only a faint smoke hint over normal terrain.
             ctx.fillStyle = 'rgba(120, 120, 120, 0.45)';
             ctx.beginPath();
-            ctx.arc(px + TILE / 2, py + TILE / 2, 5 + ((s.tick + x) % 3), 0, Math.PI * 2);
+            ctx.arc(px + TILE / 2, py + TILE / 2, 5 + ((frame + x) % 3), 0, Math.PI * 2);
             ctx.fill();
           }
+          ctx.globalAlpha = 1;
         }
         if (c.wetTimer > 0 && c.state === 'unburnt') {
           ctx.fillStyle = 'rgba(80, 140, 220, 0.3)';
@@ -122,12 +162,13 @@ export class Renderer {
 
     const seen = new Set<string>();
     for (const t of s.trucks) {
+      const pos = truckPixelPos(t, alpha);
       // Offset stacked engines so both stay visible and clickable.
-      const key = `${t.x},${t.y}`;
+      const key = `${Math.round(pos.px)},${Math.round(pos.py)}`;
       const stacked = seen.has(key);
       seen.add(key);
-      const px = t.x * TILE + (stacked ? 5 : 0);
-      const py = t.y * TILE + (stacked ? 5 : 0);
+      const px = pos.px + (stacked ? 5 : 0);
+      const py = pos.py + (stacked ? 5 : 0);
       ctx.fillStyle = '#e53935';
       ctx.fillRect(px + 3, py + 5, TILE - 6, TILE - 10);
       ctx.fillStyle = '#fff';
