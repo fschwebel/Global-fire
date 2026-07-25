@@ -1,0 +1,198 @@
+import type { TileType } from './state';
+
+/**
+ * Every tunable lives here (docs/design/gameplay.md). Values are v0 — to playtest.
+ * Tuning edits this file only, never sim code.
+ */
+export const balanceVersion = 1;
+
+export const TICK_MS = 500; // 2 Hz
+
+export const spread = {
+  P_BASE: 0.22,
+  fuelFactor: {
+    dense: 1.3,
+    sparse: 1.0,
+    grass: 1.5,
+    house: 1.1,
+    road: 0.05,
+    firebreak: 0.05,
+    water: 0,
+    rock: 0,
+  } satisfies Record<TileType, number>,
+  /** moistureFactor(dryness) = 0.35 + 1.05 × dryness */
+  moistureBase: 0.35,
+  moistureSlope: 1.05,
+  windClampMin: 0.15,
+  intensityDiv: 6,
+  intensityMin: 0.4,
+  intensityMax: 1.4,
+  diagFactor: 0.7,
+  wetFactor: 0.1,
+};
+
+export const burn = {
+  fuel: { dense: 8, sparse: 5, grass: 2, house: 6 } as Partial<Record<TileType, number>>,
+  intensityCap: { dense: 9, sparse: 6, grass: 4, house: 7 } as Partial<Record<TileType, number>>,
+};
+
+export const detection = {
+  DETECT_DELAY: 14, // ticks until a fire is reported on its own
+  CALL_IN_RADIUS: 6, // tiles from truck/house/road → people call it in
+};
+
+export const truck = {
+  cost: 40,
+  moveSpeed: {
+    road: 4,
+    grass: 1.5,
+    sparse: 1.5,
+    dense: 0.75,
+    house: 1.5,
+    firebreak: 1.5,
+    rock: 0.75,
+    water: 0,
+  } satisfies Record<TileType, number>,
+  extinguishPerTick: 3, // intensity removed per tick (cell regrows +1 → net −2)
+  waterCapacity: 24,
+  refillPerTick: 4,
+  wetTimerOnExtinguish: 20,
+  crew: 4,
+};
+
+export const rain = {
+  intensityDrop: 3,
+  globalWetTicks: 20,
+};
+
+export const habitatPerTile = { dense: 3, sparse: 2, grass: 1 } as Partial<
+  Record<TileType, number>
+>;
+
+export const map = {
+  W: 48,
+  H: 32,
+  villageCount: 3,
+  villageMinHouses: 6,
+  villageMaxHouses: 12,
+  occupantsMin: 4,
+  occupantsMax: 10,
+};
+
+/** Wind direction drifts up to ±1°/tick (±30°/30 ticks). */
+export const windDriftPerTick = Math.PI / 180;
+
+export interface SeasonParams {
+  year: number;
+  t: number; // season index 0–9
+  dryness: number;
+  windStr: number;
+  scriptedIgnitions: number;
+  randomIgnitionRate: number;
+  seasonLen: number;
+  reliefRain: 'guaranteed' | 'half' | 'none';
+}
+
+/** Reference difficulty curve (gameplay doc §7.1). One row per played season. */
+export const seasons: SeasonParams[] = [
+  {
+    year: 2026,
+    t: 0,
+    dryness: 0.3,
+    windStr: 0.2,
+    scriptedIgnitions: 1,
+    randomIgnitionRate: 0,
+    seasonLen: 300,
+    reliefRain: 'guaranteed',
+  },
+  {
+    year: 2030,
+    t: 1,
+    dryness: 0.38,
+    windStr: 0.3,
+    scriptedIgnitions: 1,
+    randomIgnitionRate: 0,
+    seasonLen: 300,
+    reliefRain: 'guaranteed',
+  },
+  {
+    year: 2035,
+    t: 2,
+    dryness: 0.44,
+    windStr: 0.4,
+    scriptedIgnitions: 2,
+    randomIgnitionRate: 0,
+    seasonLen: 320,
+    reliefRain: 'guaranteed',
+  },
+  {
+    year: 2040,
+    t: 3,
+    dryness: 0.5,
+    windStr: 0.5,
+    scriptedIgnitions: 2,
+    randomIgnitionRate: 0.001,
+    seasonLen: 320,
+    reliefRain: 'half',
+  },
+  {
+    year: 2045,
+    t: 4,
+    dryness: 0.56,
+    windStr: 0.7,
+    scriptedIgnitions: 2,
+    randomIgnitionRate: 0.002,
+    seasonLen: 340,
+    reliefRain: 'half',
+  },
+  {
+    year: 2050,
+    t: 5,
+    dryness: 0.62,
+    windStr: 0.8,
+    scriptedIgnitions: 3,
+    randomIgnitionRate: 0.002,
+    seasonLen: 360,
+    reliefRain: 'half',
+  },
+  {
+    year: 2055,
+    t: 6,
+    dryness: 0.68,
+    windStr: 0.9,
+    scriptedIgnitions: 3,
+    randomIgnitionRate: 0.003,
+    seasonLen: 380,
+    reliefRain: 'half',
+  },
+  {
+    year: 2060,
+    t: 7,
+    dryness: 0.74,
+    windStr: 1.1,
+    scriptedIgnitions: 3,
+    randomIgnitionRate: 0.003,
+    seasonLen: 400,
+    reliefRain: 'none',
+  },
+  {
+    year: 2065,
+    t: 8,
+    dryness: 0.79,
+    windStr: 1.2,
+    scriptedIgnitions: 4,
+    randomIgnitionRate: 0.004,
+    seasonLen: 400,
+    reliefRain: 'none',
+  },
+  {
+    year: 2070,
+    t: 9,
+    dryness: 0.85,
+    windStr: 1.4,
+    scriptedIgnitions: 4,
+    randomIgnitionRate: 0.004,
+    seasonLen: 420,
+    reliefRain: 'none',
+  },
+];

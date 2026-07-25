@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global Fire</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌲</text></svg>"
+    />
+    <link rel="stylesheet" href="/src/ui/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="topbar">
+        <div id="year"></div>
+        <div id="stats"><span id="hectares">0 ha burnt</span></div>
+        <div id="weather">
+          <span id="windarrow">➤</span>
+          <span id="windspeed"></span>
+          <span id="dryness"></span>
+        </div>
+      </div>
+      <div id="mapwrap">
+        <canvas id="map"></canvas>
+        <div id="alerts"></div>
+      </div>
+      <div id="bottombar">
+        <div id="selection"></div>
+        <div id="timectl">
+          <button id="btn-pause" type="button">⏸</button>
+          <button id="btn-1x" type="button" class="active">1×</button>
+          <button id="btn-2x" type="button">2×</button>
+          <div id="seasonbar"><div id="seasonfill"></div></div>
+        </div>
+      </div>
+      <div id="debrief" hidden>
+        <h2>Season over — the rains arrive</h2>
+        <div id="report"></div>
+        <p id="fact"></p>
+        <button id="btn-restart" type="button">Play again</button>
+      </div>
+    </div>
+    <script type="module" src="/src/game/main.ts"></script>
+  </body>
+</html>

@@ -8,7 +8,13 @@ You cannot stop the trend. You decide what it costs.
 
 ## Status
 
-**Planning.** This repository currently contains the founding design plan — no code yet. The plan formalizes the gameplay systems, the campaign and climate model, the UI/UX and emotional design, and the tech stack, and was produced through a multi-perspective design and critique process.
+**Prototype (M0–M1 in progress).** A playable 2026 season exists: the deterministic fire sim (seeded CA, wind, dryness, detection), a procedurally generated persistent valley (forest, river, villages, roads, station), two commandable fire engines, tactical pause/2×, the hectares counter, and the season-ending rains with a quiet debrief. See the milestone plan in [`docs/PLAN.md`](docs/PLAN.md) §3.
+
+```bash
+npm install
+npm run dev    # play at localhost:5173
+npm test       # deterministic sim tests + balance invariants
+```
 
 ## The plan
 

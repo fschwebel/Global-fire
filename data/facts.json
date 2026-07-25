@@ -1,0 +1,14 @@
+{
+  "_comment": "Every in-game fact lives here with its source. No invented statistics, ever. Re-verification of each entry against its source is an M4 release gate (docs/PLAN.md §5).",
+  "facts": [
+    {
+      "id": "season-length-2026",
+      "season": 2026,
+      "surface": "briefing",
+      "text": "The global fire-weather season lengthened ~19% between 1979 and 2013.",
+      "source": "Jolly et al., Nature Communications, 2015",
+      "sourceUrl": "https://www.nature.com/articles/ncomms8537",
+      "accessedDate": "2026-07-25"
+    }
+  ]
+}

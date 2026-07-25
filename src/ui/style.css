@@ -1,0 +1,176 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #10160f;
+  color: #e8e4da;
+  font-family: system-ui, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+
+#topbar,
+#bottombar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 6px;
+}
+
+#year {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+#stats {
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+
+#weather {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+#windarrow {
+  display: inline-block;
+  font-size: 18px;
+  transition: transform 0.5s;
+}
+
+#mapwrap {
+  position: relative;
+}
+
+#map {
+  display: block;
+  border: 1px solid #2c352a;
+  image-rendering: pixelated;
+  cursor: crosshair;
+  max-width: 100%;
+}
+
+#alerts {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  max-width: 46%;
+}
+
+.alert {
+  background: rgba(20, 24, 18, 0.85);
+  border-left: 3px solid #e07020;
+  padding: 4px 8px;
+  font-size: 13px;
+  animation: fadein 0.3s;
+}
+
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+#timectl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#timectl button {
+  background: #222b20;
+  color: #e8e4da;
+  border: 1px solid #3a4536;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 32px;
+}
+
+#timectl button.active {
+  background: #3d5236;
+  border-color: #5d7a52;
+}
+
+#seasonbar {
+  width: 180px;
+  height: 8px;
+  background: #222b20;
+  border: 1px solid #3a4536;
+}
+
+#seasonfill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #7cb342, #e0a020);
+}
+
+#selection {
+  font-size: 14px;
+  min-height: 20px;
+}
+
+#debrief {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 8, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  padding: 24px;
+}
+
+#debrief[hidden] {
+  display: none;
+}
+
+#report {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.9;
+}
+
+#fact {
+  max-width: 480px;
+  color: #b8b2a4;
+  font-size: 14px;
+  font-style: italic;
+}
+
+#btn-restart {
+  background: #3d5236;
+  color: #e8e4da;
+  border: 1px solid #5d7a52;
+  padding: 10px 24px;
+  font-size: 16px;
+  cursor: pointer;
+}
