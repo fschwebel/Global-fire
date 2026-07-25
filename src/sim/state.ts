@@ -97,6 +97,8 @@ export interface GameState {
   grid: Cell[];
   wind: Wind;
   dryness: number;
+  /** Per-season brake on spread probability (1 = neutral). */
+  spreadMult: number;
   windStrBase: number;
   seasonLen: number;
   randomIgnitionRate: number;

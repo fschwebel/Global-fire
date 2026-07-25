@@ -6,7 +6,7 @@ import type { TileType } from './state';
  */
 export const balanceVersion = 1;
 
-export const TICK_MS = 500; // 2 Hz
+export const TICK_MS = 650; // ~1.5 Hz — a calmer overall pace; balance is tick-based and unaffected
 
 export const spread = {
   P_BASE: 0.22,
@@ -38,6 +38,11 @@ export const burn = {
   // creep instead of guttering out — the player must act, fires rarely die alone.
   fuel: { dense: 8, sparse: 6, grass: 3, house: 6 } as Partial<Record<TileType, number>>,
   intensityCap: { dense: 9, sparse: 6, grass: 4, house: 7 } as Partial<Record<TileType, number>>,
+  // Moist fuels could burn slower via clamp(base − slope × dryness, 1, base);
+  // disabled after playtesting (base 1) — longer-lived cells distract engines
+  // to the fire's rear and weaken containment. Wall-clock burn length is
+  // governed by TICK_MS instead.
+  fuelMoisture: { base: 1.0, slope: 0.7 },
 };
 
 export const detection = {
@@ -91,6 +96,8 @@ export interface SeasonParams {
   t: number; // season index 0–9
   dryness: number;
   windStr: number;
+  /** Extra brake on spread probability for the calm early seasons (default 1). */
+  spreadMult?: number;
   scriptedIgnitions: number;
   randomIgnitionRate: number;
   seasonLen: number;
@@ -104,6 +111,7 @@ export const seasons: SeasonParams[] = [
     t: 0,
     dryness: 0.32,
     windStr: 0.2,
+    spreadMult: 0.85,
     scriptedIgnitions: 3,
     randomIgnitionRate: 0,
     seasonLen: 300,
@@ -114,6 +122,7 @@ export const seasons: SeasonParams[] = [
     t: 1,
     dryness: 0.38,
     windStr: 0.3,
+    spreadMult: 0.9,
     scriptedIgnitions: 3,
     randomIgnitionRate: 0,
     seasonLen: 300,
@@ -124,6 +133,7 @@ export const seasons: SeasonParams[] = [
     t: 2,
     dryness: 0.44,
     windStr: 0.4,
+    spreadMult: 0.95,
     scriptedIgnitions: 4,
     randomIgnitionRate: 0,
     seasonLen: 320,

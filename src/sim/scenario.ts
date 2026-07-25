@@ -283,6 +283,7 @@ export function createSeason(seed: number, seasonIndex = 0): GameState {
     grid,
     wind: { dir: rng() * Math.PI * 2, str: params.windStr },
     dryness: params.dryness,
+    spreadMult: params.spreadMult ?? 1,
     windStrBase: params.windStr,
     seasonLen: params.seasonLen,
     randomIgnitionRate: params.randomIgnitionRate,

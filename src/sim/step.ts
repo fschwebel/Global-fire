@@ -77,7 +77,7 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
     for (const ig of s.script.ignitions) {
       if (!ig.done && s.tick >= ig.tick) {
         const c = cellAt(s, ig.x, ig.y);
-        if (flammable(c)) ignite(c, false);
+        if (flammable(c)) ignite(s, c, false);
         ig.done = true;
       }
     }
@@ -85,7 +85,7 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
       const x = Math.floor(s.rng() * s.w);
       const y = Math.floor(s.rng() * s.h);
       const c = cellAt(s, x, y);
-      if (flammable(c)) ignite(c, false);
+      if (flammable(c)) ignite(s, c, false);
     }
   }
 
@@ -128,7 +128,7 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
 
   for (const ig of ignitions) {
     const c = cellAt(s, ig.x, ig.y);
-    if (flammable(c)) ignite(c, ig.detected);
+    if (flammable(c)) ignite(s, c, ig.detected);
   }
 
   // Timers.

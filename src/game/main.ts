@@ -3,7 +3,8 @@ import { createSeason } from '../sim/scenario';
 import { Hud } from '../ui/hud';
 import { GameLoop } from './loop';
 
-const CAMPAIGN_SEED = 20260614;
+// Chosen from tuning probes: lively unfought fires, strongly containable when fought.
+const CAMPAIGN_SEED = 42;
 
 let state = createSeason(CAMPAIGN_SEED, 0);
 let pinnedTruckId: number | null = null;
