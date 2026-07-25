@@ -219,8 +219,24 @@ export function createSeason(seed: number, seasonIndex = 0): GameState {
     randomIgnitionRate: params.randomIgnitionRate,
     station,
     trucks: [
-      { id: 1, x: station.x, y: station.y, water: T.waterCapacity, path: [], movePoints: 0 },
-      { id: 2, x: station.x, y: station.y, water: T.waterCapacity, path: [], movePoints: 0 },
+      {
+        id: 1,
+        x: station.x,
+        y: station.y,
+        water: T.waterCapacity,
+        path: [],
+        movePoints: 0,
+        target: null,
+      },
+      {
+        id: 2,
+        x: station.x,
+        y: station.y,
+        water: T.waterCapacity,
+        path: [],
+        movePoints: 0,
+        target: null,
+      },
     ],
     stats: {
       hectaresBurnt: 0,

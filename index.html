@@ -21,9 +21,20 @@
           <span id="dryness"></span>
         </div>
       </div>
-      <div id="mapwrap">
-        <canvas id="map"></canvas>
-        <div id="alerts"></div>
+      <div id="main">
+        <div id="sidebar">
+          <div id="palette">
+            <button id="tool-engine" type="button" class="tool active" title="Dispatch engine — click the map, the nearest engine responds">🚒</button>
+            <div class="slot" title=""></div>
+            <div class="slot" title=""></div>
+            <div class="slot" title=""></div>
+          </div>
+          <div id="engines"></div>
+        </div>
+        <div id="mapwrap">
+          <canvas id="map"></canvas>
+          <div id="alerts"></div>
+        </div>
       </div>
       <div id="bottombar">
         <div id="selection"></div>
@@ -38,7 +49,7 @@
         <h2>Season over — the rains arrive</h2>
         <div id="report"></div>
         <p id="fact"></p>
-        <button id="btn-restart" type="button">Play again</button>
+        <button id="btn-restart" type="button">Continue</button>
       </div>
     </div>
     <script type="module" src="/src/game/main.ts"></script>

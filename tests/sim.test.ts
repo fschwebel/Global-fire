@@ -34,8 +34,8 @@ function run(seed: number, ticks: number, commands: Map<number, Command[]> = new
 describe('determinism', () => {
   it('same seed + same commands ⇒ identical end state (golden master)', () => {
     const cmds = new Map<number, Command[]>([
-      [20, [{ type: 'moveTruck', truckId: 1, x: 10, y: 10 }]],
-      [60, [{ type: 'moveTruck', truckId: 2, x: 30, y: 20 }]],
+      [20, [{ type: 'dispatch', x: 10, y: 10, truckId: 1 }]],
+      [60, [{ type: 'dispatch', x: 30, y: 20 }]],
     ]);
     const a = run(42, 200, cmds);
     const b = run(42, 200, cmds);
@@ -125,7 +125,7 @@ describe('trucks', () => {
             }
           if (best && best.d > 1) {
             const tx = best.x + (t.x < best.x ? -1 : 1);
-            cmds.push({ type: 'moveTruck', truckId: t.id, x: tx, y: best.y });
+            cmds.push({ type: 'dispatch', truckId: t.id, x: tx, y: best.y });
           }
         }
       }
@@ -140,5 +140,39 @@ describe('trucks', () => {
     t.water = 0;
     for (let i = 0; i < 10; i++) step(s);
     expect(t.water).toBeGreaterThan(0);
+  });
+});
+
+describe('dispatch (measure-based orders)', () => {
+  function dispatchedId(s: GameState, cmd: Command): number | undefined {
+    const events = step(s, [cmd]);
+    const ev = events.find((e) => e.type === 'engineDispatched');
+    return ev?.type === 'engineDispatched' ? ev.truckId : undefined;
+  }
+
+  it('an unpinned dispatch sends the closest available engine', () => {
+    const s = createSeason(42, 0);
+    const t2 = s.trucks[1]!;
+    // Separate the engines: engine 2 far away in a corner.
+    t2.x = 2;
+    t2.y = 2;
+    const target = { x: Math.min(s.w - 2, s.trucks[0]!.x + 4), y: s.trucks[0]!.y };
+    expect(dispatchedId(s, { type: 'dispatch', x: target.x, y: target.y })).toBe(1);
+  });
+
+  it('a pinned dispatch overrides proximity', () => {
+    const s = createSeason(42, 0);
+    const t2 = s.trucks[1]!;
+    t2.x = 2;
+    t2.y = 2;
+    const target = { x: Math.min(s.w - 2, s.trucks[0]!.x + 4), y: s.trucks[0]!.y };
+    expect(dispatchedId(s, { type: 'dispatch', x: target.x, y: target.y, truckId: 2 })).toBe(2);
+  });
+
+  it('an empty-tank engine yields to a full one at similar distance', () => {
+    const s = createSeason(42, 0);
+    s.trucks[0]!.water = 0;
+    const target = { x: Math.min(s.w - 2, s.trucks[0]!.x + 5), y: s.trucks[0]!.y };
+    expect(dispatchedId(s, { type: 'dispatch', x: target.x, y: target.y })).toBe(2);
   });
 });

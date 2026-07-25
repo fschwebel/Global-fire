@@ -43,6 +43,8 @@ export interface Truck {
   path: Point[];
   /** Fractional movement accumulator. */
   movePoints: number;
+  /** Ordered destination while en route; null when idle/arrived. */
+  target: Point | null;
 }
 
 export interface Wind {
@@ -104,10 +106,15 @@ export interface GameState {
   ended: boolean;
 }
 
-export type Command = { type: 'moveTruck'; truckId: number; x: number; y: number };
+/**
+ * Player orders are measures aimed at the map, not unit micro: `dispatch`
+ * without a truckId sends the closest available engine; with one, that engine.
+ */
+export type Command = { type: 'dispatch'; x: number; y: number; truckId?: number };
 
 export type GameEvent =
   | { type: 'fireDetected'; x: number; y: number }
+  | { type: 'engineDispatched'; truckId: number; x: number; y: number }
   | { type: 'reliefRain' }
   | { type: 'windShift' }
   | { type: 'seasonEnded'; report: Stats };

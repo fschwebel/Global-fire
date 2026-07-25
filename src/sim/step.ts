@@ -2,11 +2,14 @@ import { detection, habitatPerTile, rain, windDriftPerTick } from './balance';
 import { flammable, ignite, intensityCap, spreadProb } from './fire';
 import type { Command, GameEvent, GameState } from './state';
 import { cellAt, idx, inBounds } from './state';
-import { orderTruck, updateTrucks } from './units';
+import { dispatchEngine, updateTrucks } from './units';
 
-function applyCommands(s: GameState, commands: Command[]): void {
+function applyCommands(s: GameState, commands: Command[], events: GameEvent[]): void {
   for (const cmd of commands) {
-    if (cmd.type === 'moveTruck') orderTruck(s, cmd.truckId, cmd.x, cmd.y);
+    if (cmd.type === 'dispatch') {
+      const id = dispatchEngine(s, cmd.x, cmd.y, cmd.truckId);
+      if (id !== null) events.push({ type: 'engineDispatched', truckId: id, x: cmd.x, y: cmd.y });
+    }
   }
 }
 
@@ -46,7 +49,7 @@ function nearRoadHouseOrTruck(s: GameState, x: number, y: number): boolean {
 export function step(s: GameState, commands: Command[] = []): GameEvent[] {
   if (s.ended) return [];
   const events: GameEvent[] = [];
-  applyCommands(s, commands);
+  applyCommands(s, commands, events);
 
   // Wind: slow drift, plus any scripted shift.
   s.wind.dir += (s.rng() * 2 - 1) * windDriftPerTick;

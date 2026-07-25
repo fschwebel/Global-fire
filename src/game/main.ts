@@ -6,24 +6,28 @@ import { GameLoop } from './loop';
 const CAMPAIGN_SEED = 20260614;
 
 let state = createSeason(CAMPAIGN_SEED, 0);
-let selectedTruckId: number | null = null;
+let pinnedTruckId: number | null = null;
+
+function togglePin(truckId: number): void {
+  pinnedTruckId = pinnedTruckId === truckId ? null : truckId;
+}
 
 const canvas = document.getElementById('map') as HTMLCanvasElement;
 const renderer = new Renderer(canvas, state);
-const hud = new Hud(state);
+const hud = new Hud(state, togglePin);
 
 const loop = new GameLoop(
   state,
   (events) => hud.handle(events),
   () => {
-    renderer.draw(selectedTruckId);
-    hud.update(selectedTruckId);
+    renderer.draw(pinnedTruckId);
+    hud.update(pinnedTruckId);
   },
 );
 
 function restart(): void {
   state = createSeason(CAMPAIGN_SEED, 0);
-  selectedTruckId = null;
+  pinnedTruckId = null;
   renderer.setState(state);
   hud.setState(state);
   loop.setState(state);
@@ -40,19 +44,18 @@ canvas.addEventListener('click', (ev) => {
   const y = Math.floor(((ev.clientY - rect.top) * scaleY) / TILE);
   if (x < 0 || y < 0 || x >= state.w || y >= state.h) return;
 
-  const truck = state.trucks.find((t) => Math.abs(t.x - x) <= 0 && Math.abs(t.y - y) <= 0);
+  // Clicking an engine on the map pins it — same as its sidebar card.
+  const truck = state.trucks.find((t) => t.x === x && t.y === y);
   if (truck) {
-    selectedTruckId = truck.id;
+    togglePin(truck.id);
     return;
   }
-  if (selectedTruckId !== null) {
-    loop.enqueue({ type: 'moveTruck', truckId: selectedTruckId, x, y });
-  }
+  loop.enqueue({ type: 'dispatch', x, y, truckId: pinnedTruckId ?? undefined });
 });
 
 canvas.addEventListener('contextmenu', (ev) => {
   ev.preventDefault();
-  selectedTruckId = null;
+  pinnedTruckId = null;
 });
 
 // --- Time controls ---------------------------------------------------------
@@ -78,7 +81,7 @@ document.addEventListener('keydown', (ev) => {
     setSpeed(loop.speed === 0 ? 1 : 0);
   } else if (ev.key === '1') setSpeed(1);
   else if (ev.key === '2') setSpeed(2);
-  else if (ev.key === 'Escape') selectedTruckId = null;
+  else if (ev.key === 'Escape') pinnedTruckId = null;
 });
 
 document.addEventListener('visibilitychange', () => {

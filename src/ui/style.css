@@ -54,8 +54,101 @@ body {
   transition: transform 0.5s;
 }
 
+#main {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+#sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 132px;
+  flex: none;
+}
+
+#palette {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+#palette .tool {
+  background: #222b20;
+  color: #e8e4da;
+  border: 1px solid #3a4536;
+  font-size: 22px;
+  min-height: 48px;
+  cursor: pointer;
+}
+
+#palette .tool.active {
+  background: #3d5236;
+  border-color: #5d7a52;
+}
+
+/* Future measures: present but dark — the palette knows what's coming. */
+#palette .slot {
+  background: #171d15;
+  border: 1px solid #242c21;
+  min-height: 48px;
+}
+
+#engines {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.engine-card {
+  background: #1a2118;
+  border: 1px solid #3a4536;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  color: #e8e4da;
+}
+
+.engine-card .status {
+  color: #9aa392;
+}
+
+.engine-card.pinned {
+  border-color: #e8e4da;
+  background: #26301f;
+}
+
+.engine-card.flash {
+  animation: dispatchflash 0.6s;
+}
+
+@keyframes dispatchflash {
+  0% {
+    background: #4a5d3e;
+  }
+  100% {
+    background: #1a2118;
+  }
+}
+
+.engine-card .waterbar {
+  height: 5px;
+  background: #222;
+}
+
+.engine-card .waterbar > div {
+  height: 100%;
+  background: #4a90d9;
+}
+
 #mapwrap {
   position: relative;
+  flex: 1;
 }
 
 #map {

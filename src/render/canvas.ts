@@ -105,9 +105,29 @@ export class Renderer {
         }
       }
 
+    // Destination flags for engines en route.
     for (const t of s.trucks) {
-      const px = t.x * TILE;
-      const py = t.y * TILE;
+      if (!t.target) continue;
+      const fx = t.target.x * TILE;
+      const fy = t.target.y * TILE;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(fx + 6, fy + TILE - 4);
+      ctx.lineTo(fx + 6, fy + 4);
+      ctx.lineTo(fx + TILE - 5, fy + 7);
+      ctx.lineTo(fx + 6, fy + 10);
+      ctx.stroke();
+    }
+
+    const seen = new Set<string>();
+    for (const t of s.trucks) {
+      // Offset stacked engines so both stay visible and clickable.
+      const key = `${t.x},${t.y}`;
+      const stacked = seen.has(key);
+      seen.add(key);
+      const px = t.x * TILE + (stacked ? 5 : 0);
+      const py = t.y * TILE + (stacked ? 5 : 0);
       ctx.fillStyle = '#e53935';
       ctx.fillRect(px + 3, py + 5, TILE - 6, TILE - 10);
       ctx.fillStyle = '#fff';

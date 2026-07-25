@@ -63,10 +63,55 @@ export function findPath(s: GameState, from: Point, to: Point): Point[] {
   return path;
 }
 
-export function orderTruck(s: GameState, truckId: number, x: number, y: number): void {
-  const t = s.trucks.find((tr) => tr.id === truckId);
-  if (!t) return;
-  t.path = findPath(s, { x: t.x, y: t.y }, { x, y });
+/** Reachable path to (x,y), falling back to the best-reachable Moore neighbour (e.g. a water click). */
+function pathToOrNear(s: GameState, from: Point, x: number, y: number): Point[] {
+  const direct = findPath(s, from, { x, y });
+  if (direct.length > 0 || (from.x === x && from.y === y)) return direct;
+  let best: Point[] = [];
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!inBounds(s, nx, ny)) continue;
+      const p = findPath(s, from, { x: nx, y: ny });
+      if (p.length > 0 && (best.length === 0 || p.length < best.length)) best = p;
+    }
+  return best;
+}
+
+/**
+ * Dispatch an engine to (x,y). Without truckId, the closest available engine
+ * responds: lowest path length, heavily penalized if its tank is empty, lightly
+ * if already en route. Deterministic (fixed iteration order, lowest id wins ties).
+ * Returns the dispatched engine's id, or null if nothing can reach the target.
+ */
+export function dispatchEngine(
+  s: GameState,
+  x: number,
+  y: number,
+  truckId?: number,
+): number | null {
+  if (truckId != null) {
+    const t = s.trucks.find((tr) => tr.id === truckId);
+    if (!t) return null;
+    const path = pathToOrNear(s, { x: t.x, y: t.y }, x, y);
+    if (path.length === 0 && !(t.x === x && t.y === y)) return null;
+    t.path = path;
+    t.target = path.length > 0 ? { x, y } : null;
+    return t.id;
+  }
+  let best: { t: Truck; path: Point[]; cost: number } | null = null;
+  for (const t of s.trucks) {
+    const path = pathToOrNear(s, { x: t.x, y: t.y }, x, y);
+    if (path.length === 0 && !(t.x === x && t.y === y)) continue;
+    const cost = path.length + (t.water === 0 ? 1000 : 0) + (t.path.length > 0 ? 8 : 0);
+    if (best === null || cost < best.cost) best = { t, path, cost };
+  }
+  if (best === null) return null;
+  best.t.path = best.path;
+  best.t.target = best.path.length > 0 ? { x, y } : null;
+  return best.t.id;
 }
 
 function adjacentBurning(s: GameState, t: Truck): { x: number; y: number } | null {
@@ -107,9 +152,11 @@ export function updateTrucks(s: GameState): void {
         t.y = next.y;
         t.movePoints -= 1;
       }
+      if (t.path.length === 0) t.target = null;
       continue;
     }
     t.movePoints = 0;
+    t.target = null;
 
     const target = t.water > 0 ? adjacentBurning(s, t) : null;
     if (target) {
