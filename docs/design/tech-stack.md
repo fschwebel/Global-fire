@@ -40,11 +40,11 @@ Needs: a 48×32 tile map, an animated fire front with smoke/glow, a modest numbe
 
 ## 2. Language & tooling
 
-- **TypeScript, `strict: true`.** Grid indices, cell states, and per-year difficulty params are exactly the code where a type system pays for itself immediately. The `GameState` and event payload types double as the de facto contract between sim and UI.
+- **TypeScript, `strict: true`.** Grid indices, cell states, and per-season difficulty params are exactly the code where a type system pays for itself immediately. The `GameState` and event payload types double as the de facto contract between sim and UI.
 - **Vite.** Instant dev server, trivial static build, zero config worth mentioning.
 - **Biome** for lint + format — one fast tool, one config file.
 - **Vitest.** **Test the simulation, not the game:**
-  - *Unit-test:* spread rules (wind, dryness, fuel types), determinism (same seed ⇒ identical end state), per-year difficulty application, stat accumulation (hectares, animals, houses, casualties), evacuation warning-time mortality, suppression effects, save migration.
+  - *Unit-test:* spread rules (wind, dryness, fuel types), determinism (same seed ⇒ identical end state), per-season difficulty application, inter-season regrowth, stat accumulation (hectares, animals, houses, casualties), evacuation warning-time mortality, suppression effects, save migration.
   - *Bot-policy balance tests:* headless runs of scripted policies (do-nothing / naive / competent) across N seeds, asserting the tuning invariants ([`gameplay.md`](gameplay.md) §7.2) — this is the antidote to tuning hell and runs in CI.
   - *Do not over-test:* rendering, particles, tweens, DOM overlays, audio. Verified by playing; canvas snapshots are a maintenance tax with near-zero defect yield here.
   - Determinism makes golden-master tests trivial: run seed `X` for `N` ticks with a scripted command list, assert on the final stats object.
@@ -73,7 +73,7 @@ src/
     step.ts             # fixed-timestep update: spread, units, stats
     fire.ts             # ignition & spread model (wind, dryness, fuel)
     units.ts            # trucks, bombers, towers, crews, evacuation logic
-    scenario.ts         # per-year scripts: ignitions, spikes, events
+    scenario.ts         # per-season scripts: ignitions, spikes, events, interstitials
     balance.ts          # every tunable (versioned)
     rng.ts              # seeded PRNG
     commands.ts         # command types + queue
@@ -129,7 +129,7 @@ Producible by a small team with no dedicated artist:
 
 Target: **60 fps render on a mid-range phone**; the 2 Hz sim over 1,536 cells is trivial. The only ways to lose 60 fps are self-inflicted:
 
-- **Bake the terrain.** Render all static tiles once per year into a `RenderTexture` (one draw call thereafter); update only burning/burnt cells (the fire front is a small subset). The single most important optimization.
+- **Bake the terrain.** Render all static tiles once per season into a `RenderTexture` (one draw call thereafter); update only burning/burnt cells (the fire front is a small subset). The single most important optimization.
 - **Batch particles.** Fire/smoke via `ParticleContainer` with a pooled array — hundreds of particles, one draw call. Cap the budget (~500) and degrade count, never frame rate.
 - **No per-frame allocation** in the loop: pool particles and event objects, reuse vectors; update DOM counters only when a stat changes (the event bus gives this for free).
 - **Cheap:** tile tints, sprite movement, alpha fades, the whole sim tick. **Expensive:** full-map redraws, Pixi filters (use one subtle glow at most, or none), canvas-rendered text, uncapped `devicePixelRatio` (cap at 2).

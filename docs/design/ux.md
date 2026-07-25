@@ -1,8 +1,8 @@
 # UI/UX & Emotional Design
 
-> **Canon note** (binding, from [`../PLAN.md`](../PLAN.md) §2): campaign 2026–2035 · metric reveals: hectares 2026, animals 2027, houses 2028, firefighters 2030 (at zero), population 2031 · no stars, grades, or score displays anywhere · two endings ("The Long Defense", "The Year the Line Broke") + do-nothing comparison · audio budget: one global ambience crossfade + scar-tile mute (per tech-stack scope) · UI says **"water bomber"**, never "Canadair".
+> **Canon note** (binding, from [`../PLAN.md`](../PLAN.md) §2): campaign of ten seasons — 2026, 2030, then every five years to 2070; 4–5 real years pass between seasons · metric reveals: hectares 2026, animals 2030, houses 2035, firefighters 2045 (at zero), population 2050 · no stars, grades, or score displays anywhere · two endings ("The Long Defense", "The Year the Line Broke") + do-nothing comparison · audio budget: one global ambience crossfade + scar-tile mute (per tech-stack scope) · UI says **"water bomber"**, never "Canadair".
 
-**Design thesis: the interface itself is the narrative.** The player never reads a story — they watch their own HUD grow heavier year after year. Every decision below serves one arc: **from stewardship to triage**. In 2026 the screen is calm, green, and mostly empty. By 2035 the same screen is crowded with counters the player wishes didn't exist. The game persuades by making climate escalation *felt through the interface*, not told.
+**Design thesis: the interface itself is the narrative.** The player never reads a story — they watch their own HUD grow heavier season after season. Every decision below serves one arc: **from stewardship to triage**. In 2026 the screen is calm, green, and mostly empty. By 2070 the same screen is crowded with counters the player wishes didn't exist. The game persuades by making climate escalation *felt through the interface*, not told.
 
 ---
 
@@ -27,12 +27,13 @@ Every screen is one tap/click from its predecessor. No nested menus. A mini game
 Framed as an in-fiction document — **"Regional Fire Authority · Season Briefing"**, dated. Top to bottom:
 
 1. **The year**, in very large type (§3.4).
-2. Season forecast: danger outlook, wind regime, dryness — teaches the player what to fear this year. (From 2033 the relief-rain line reads: *none expected* — and never returns.)
-3. **New this season** — unlock panel: the tool's blueprint slides in with one line of fiction ("Two engines reassigned to your sector") and one line of mechanics (hopeful register, §2.3).
-4. One real climate fact, one sentence, tied to this year's mechanical change (§5).
-5. `Begin season`.
+2. **The years between** — two quiet interstitial lines summarizing the elided seasons since the player's last one ("2031–2034: four seasons, two large fires held by the autumn rains. The Aldervale scar greens over. Twelve new homes permitted at the forest edge."), generated from sim state and script (progression doc §1.2).
+3. Season forecast: danger outlook, wind regime, dryness — teaches the player what to fear this season. (From 2060 the relief-rain line reads: *none expected* — and never returns.)
+4. **New this season** — unlock panel: the tool's blueprint slides in with one line of fiction ("Two engines reassigned to your sector") and one line of mechanics (hopeful register, §2.3).
+5. One real climate fact, one sentence, tied to this season's mechanical change (§5).
+6. `Begin season`.
 
-The briefing is where hope lives. Its visual style degrades with the era: crisp white memo in 2026, coffee-stained and terse by the early 2030s, emergency-red letterhead by the finale. Same template, decaying — the bureaucracy itself is stressed.
+The briefing is where hope lives. Its visual style degrades with the era: crisp white memo in 2026, coffee-stained and terse by mid-century, emergency-red letterhead by the finale. Same template, decaying — the bureaucracy itself is stressed.
 
 ### 1.4 In-game HUD
 
@@ -70,7 +71,7 @@ Full-screen, quiet. Numbers **count up one at a time**, in stat-bar order — th
 
 ### 1.6 Campaign Timeline
 
-A horizontal band, 2026 → 2035. Each completed year is a node showing a **thumbnail of the map as the player left it — cumulative burn scars included** (trivial with the persistent map). The timeline becomes a filmstrip of degradation the player authored, scrollable at will. Future years are dark, unlabeled nodes. This screen doubles as the save/continue hub.
+A horizontal band, 2026 → 2070, with visible gaps between the season nodes — the spacing *is* the years passing. Each completed season is a node showing a **thumbnail of the map as the player left it — cumulative burn scars included** (trivial with the persistent map). The timeline becomes a filmstrip of degradation the player authored, scrollable at will. Future seasons are dark, unlabeled nodes. This screen doubles as the save/continue hub.
 
 ### 1.7 Ending screens
 
@@ -96,7 +97,7 @@ Two vocabularies, deliberately opposite in tone:
 
 At campaign start the bar shows one counter (`hectares burnt`) — and, crucially, **several faint unlit slots** beside it. No labels, no tooltips, just shaped shadows. The player notices the bar is longer than its content. This is quiet foreboding: the UI knows something the player doesn't.
 
-Counters activate per the canonical schedule (2026 → 2027 → 2028 → 2030 → 2031). The UX contract: **each activation is event-triggered within its scheduled year** — the counter appears the first time the thing actually happens, and the scenario guarantees it happens ([`progression.md`](progression.md) §4).
+Counters activate per the canonical schedule (2026 → 2030 → 2035 → 2045 → 2050). The UX contract: **each activation is event-triggered within its scheduled season** — the counter appears the first time the thing actually happens, and the scenario guarantees it happens ([`progression.md`](progression.md) §4).
 
 ### 2.2 Anatomy of a reveal moment
 
@@ -121,11 +122,11 @@ At the Year Briefing: blueprint card, one line of fiction, one line of mechanics
 
 | Era | Years | Land | Sky/light | On-map weather |
 |---|---|---|---|---|
-| **Stewardship** | 2026–2029 | Saturated greens, blue lakes | Clear, warm morning light | Occasional wind |
-| **Strain** | 2030–2033 | Olive and straw yellow creeping in; lakes visibly smaller | Pale, hazy white | Heat shimmer; longer season bar |
-| **Triage** | 2034–2035 | Ochre, grey-brown; cumulative black scars dominate | Orange-grey haze; sun a dim disc | Persistent smoke layer; ember wind |
+| **Stewardship** | 2026–2040 | Saturated greens, blue lakes | Clear, warm morning light | Occasional wind |
+| **Strain** | 2045–2060 | Olive and straw yellow creeping in; lakes visibly smaller | Pale, hazy white | Heat shimmer; longer season bar |
+| **Triage** | 2065–2070 | Ochre, grey-brown; cumulative black scars dominate | Orange-grey haze; sun a dim disc | Persistent smoke layer; ember wind |
 
-The shift is continuous, not stepped — each year a few percent drier-looking than the last, so the player never sees the change happen, only realizes it has. Scrolling the Campaign Timeline thumbnails delivers that realization on purpose.
+The shift is gradual — each season a shade drier-looking than the last, the half-decade gaps absorbing the steps — so the player never sees the change happen, only realizes it has. Scrolling the Campaign Timeline thumbnails delivers that realization on purpose.
 
 ### 3.2 Smoke as UI weather
 
@@ -136,13 +137,13 @@ A screen-space haze layer whose baseline opacity rises with the era — in late 
 One global ambience crossfade driven by the burnt fraction of the map, plus a simple mute when the camera rests over scar tiles:
 
 - **2026:** layered birdsong, insects, light wind. Music: a sparse warm acoustic motif, mostly silence.
-- **2030s:** birdsong thins; dry wind becomes the bed; radio chatter during fires; sustained low strings, used sparingly.
+- **Mid-century:** birdsong thins; dry wind becomes the bed; radio chatter during fires; sustained low strings, used sparingly.
 - **Late campaign:** wind and radio static dominate; sirens are heard before fires are seen; music nearly absent — its absence *is* the score.
 - **The absence principle:** pan the camera over an old scar and the ambience mutes. Silence is the game's memorial — diegetic, one afternoon of work, devastating.
 
 ### 3.4 The year counter as dramatic device
 
-One typeface, three sizes, everywhere: huge on briefings, medium on reports, small and persistent top-left in the HUD. The new-year transition is a slow tick-over (`2031 → 2032`) held on black for a full second — the only pure black in the game. Late-era numerals pick up a faint ash-grain texture. The player learns to feel a small dread at the tick itself: *what does this year unlock — and what does it reveal?* That conditioned response is the climate message in miniature.
+One typeface, three sizes, everywhere: huge on briefings, medium on reports, small and persistent top-left in the HUD. The season transition **rolls through the skipped years** — `2041, 2042, 2043, 2044…` accelerating, then landing hard on `2045` — held on black for a full second, the only pure black in the game. Four years of someone else's summers pass in half a breath; the player arrives at the one that matters. Late-era numerals pick up a faint ash-grain texture. The player learns to feel a small dread at the roll itself: *where will it stop — and what will it reveal?* That conditioned response is the climate message in miniature.
 
 ### 3.5 Dread, responsibly (hard rules — applied as a checklist to every content PR)
 
@@ -195,7 +196,7 @@ Principle: **the simulation is the argument; facts annotate it.** Every fact app
 
 | Surface | Content | Frequency |
 |---|---|---|
-| Year Briefing | One fact tied to this year's mechanical change | 1/year, 1 sentence |
+| Year Briefing | One fact tied to this season's mechanical change | 1/season, 1 sentence |
 | Loading tips | Rotating short facts + practical fire-safety notes | 1 per load |
 | Year-End footnote | One real-world comparison scaled against the player's own numbers | 1/year |
 | Ending / Awareness screen | The campaign summarized, then real organizations and resources | Once |
@@ -211,7 +212,7 @@ All facts carry a short attribution in place ("— Copernicus/EFFIS") and a full
 
 Example strings:
 
-> *Briefing, 2033:* "Winter rainfall came in 40 percent below average. The forest enters summer already dry."
+> *Briefing, 2060:* "Winter rainfall came in 40 percent below average for the fourth consecutive year. The forest enters summer already dry."
 >
 > *Alert:* "Wind shift — NW 45 km/h. The Aldervale front reaches the valley road in minutes."
 >
@@ -245,7 +246,7 @@ After the ending: *"This forest is invented. The trend is not."* → three actio
 
 **Destruction gets zero juice. Agency gets all of it.**
 
-- **No screen shake, ever** — not on ignition, not on a lost house, not on the firestorm. Shake spends spectacle on catastrophe and teaches the player that fire is exciting. The only concession to overwhelming force: a low-frequency audio rumble during the 2035 pyroCb (audio-only, caption-covered, absent in reduced-motion sessions where the caption carries it).
+- **No screen shake, ever** — not on ignition, not on a lost house, not on the firestorm. Shake spends spectacle on catastrophe and teaches the player that fire is exciting. The only concession to overwhelming force: a low-frequency audio rumble during the 2070 pyroCb (audio-only, caption-covered, absent in reduced-motion sessions where the caption carries it).
 - Player actions are tactile: buttons depress with a soft click; truck deployment lands with a decisive thunk and a siren chirp; a water-bomber drop gets the full treatment — engine doppler, water sheet, steam hiss, a brief bright-green tint where the drop saved unburnt forest; a completed evacuation ends on one soft, warm chime.
 - Destruction gets **subtraction**: local desaturation, ambience dropping out, a counter ticking without fanfare. The kinesthetic message: *acting feels good; losing feels like less.*
 - The micro-feedback budget is small by design — a dozen sounds, a handful of tweens. Polish the ten interactions the player performs two hundred times; leave the catastrophe unadorned.

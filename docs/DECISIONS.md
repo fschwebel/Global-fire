@@ -4,7 +4,7 @@ Questions the plan deliberately leaves open, with the current recommendation whe
 
 | # | Decision | Options / notes | Recommendation | Decide by |
 |---|---|---|---|---|
-| 1 | **Game title** | "Global Fire" (repo name) vs. something evocative ("The Long Defense", "Fire Season", "2026–2035") | Keep *Global Fire* as working title; revisit at M4 with playtesters | M4 |
+| 1 | **Game title** | "Global Fire" (repo name) vs. something evocative ("The Long Defense", "Fire Season", "2026–2070") | Keep *Global Fire* as working title; revisit at M4 with playtesters | M4 |
 | 2 | **Fixed vs. dynamic start year** | Brief says start in 2026. If released in/after 2027, a dynamic "current year" start keeps the near-future framing; but fixed 2026 keeps facts/scripts aligned | Fixed 2026 — the authored facts and curve depend on it | M0 (settled unless argued) |
 | 3 | **Assist mode** | A "story mode" toggle (spread ×0.8, mortality display unchanged) for accessibility and classroom use | **Yes** — cheap, aligns with the accessibility stance | M4 |
 | 4 | **itch.io mirror** | GitHub Pages is primary; itch.io adds discoverability for an awareness title | Yes at M5 if free effort allows | M5 |
