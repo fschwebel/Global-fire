@@ -97,9 +97,9 @@ export class Hud {
   private ffs = el<HTMLSpanElement>('ffs');
   private civs = el<HTMLSpanElement>('civs');
   private year = el<HTMLDivElement>('year');
-  private tempnote = el<HTMLDivElement>('tempnote');
-  private tempavg = el<HTMLSpanElement>('tempavg');
-  private tempmax = el<HTMLSpanElement>('tempmax');
+  private bTemp = el<HTMLParagraphElement>('b-temp');
+  private bTempAvg = el<HTMLSpanElement>('b-temp-avg');
+  private bTempMax = el<HTMLSpanElement>('b-temp-max');
   private windarrow = el<HTMLSpanElement>('windarrow');
   private windspeed = el<HTMLSpanElement>('windspeed');
   private dryness = el<HTMLSpanElement>('dryness');
@@ -167,14 +167,6 @@ export class Hud {
   private applySeason(): void {
     const s = this.state;
     this.year.textContent = String(s.seasonYear);
-    const avg = warming[s.seasonYear];
-    if (avg !== undefined) {
-      this.tempavg.textContent = `≈ +${avg} °C — the global average`;
-      this.tempmax.textContent = `peak summer days here: ≈ +${hotDayAt(s.seasonYear)} °C`;
-      this.tempnote.title =
-        'Central estimate for a middle-of-the-road emissions pathway (IPCC AR6, ≈SSP2-4.5), vs pre-industrial. ' +
-        'A global average understates a fire season: land warms faster than the mean, and hot extremes rise roughly 1.5–2× faster (IPCC AR6 WG1).';
-    }
     this.dryness.textContent = `dryness ${Math.round(s.dryness * 100)}%`;
     this.animals.hidden = s.seasonYear < reveals.animals;
     this.houses.hidden = s.seasonYear < reveals.houses;
@@ -373,6 +365,14 @@ export class Hud {
   showBriefing(grew: boolean): void {
     const s = this.state;
     this.bYear.textContent = String(s.seasonYear);
+    const avg = warming[s.seasonYear];
+    this.bTemp.hidden = avg === undefined;
+    if (avg !== undefined) {
+      this.bTempAvg.textContent = `≈ +${avg} °C above pre-industrial — the global average (IPCC AR6, middle-of-the-road pathway)`;
+      this.bTempMax.textContent = `Averages hide the peaks: summer's hottest days here run ≈ +${hotDayAt(s.seasonYear)} °C.`;
+      this.bTemp.title =
+        'Central estimate vs pre-industrial for a middle-of-the-road emissions pathway (IPCC AR6, ≈SSP2-4.5). A global average understates a fire season: land warms faster than the mean, and hot extremes rise roughly 1.5–2× faster (IPCC AR6 WG1) — the peak-day figure uses the low end of that range.';
+    }
     this.bGrowth.hidden = !grew;
     const unlock = unlockNotes[s.seasonYear];
     this.bUnlock.hidden = !unlock;
