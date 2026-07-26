@@ -2,6 +2,7 @@ import { bomber as B, crewUnit as CU, danger as DR, truck as T, unlocks } from '
 import type { Bomber, Crew, GameEvent, GameState, Stats, Truck } from '../sim/state';
 import { cellAt, inActive } from '../sim/state';
 import { briefingFacts, hotDayAt, returnPeriodYears, reveals, unlockNotes, warming } from './facts';
+import { L, fmt } from './i18n';
 
 export type Tool = 'engine' | 'evac' | 'bomber' | 'tower' | 'crew';
 
@@ -16,23 +17,23 @@ function el<T extends HTMLElement>(id: string): T {
  * player hasn't been introduced to must never leak through campaign totals.
  */
 export function statLine(stats: Stats, year: number): string {
-  const parts = [`${stats.hectaresBurnt} ha`];
-  if (year >= reveals.animals) parts.push(`~${stats.animalsKilled} animals`);
-  if (year >= reveals.houses) parts.push(`${stats.housesLost} homes`);
-  if (year >= reveals.firefighters) parts.push(`${stats.firefightersLost} firefighters`);
-  if (year >= reveals.civilians) parts.push(`${stats.civiliansLost} people`);
+  const parts = [L.haShort(stats.hectaresBurnt)];
+  if (year >= reveals.animals) parts.push(L.animalsShort(stats.animalsKilled));
+  if (year >= reveals.houses) parts.push(L.homesShort(stats.housesLost));
+  if (year >= reveals.firefighters) parts.push(L.firefightersShort(stats.firefightersLost));
+  if (year >= reveals.civilians) parts.push(L.peopleShort(stats.civiliansLost));
   return parts.join(' · ');
 }
 
 function engineStatus(s: GameState, t: Truck): string {
-  if (t.dangerTicks > 0) return 'IN DANGER — pull out!';
-  if (t.path.length > 0) return 'En route';
+  if (t.dangerTicks > 0) return L.statusDanger;
+  if (t.path.length > 0) return L.statusEnRoute;
   for (let dy = -1; dy <= 1; dy++)
     for (let dx = -1; dx <= 1; dx++) {
       if (dx === 0 && dy === 0) continue;
       const nx = t.x + dx;
       const ny = t.y + dy;
-      if (inActive(s, nx, ny) && cellAt(s, nx, ny).state === 'burning') return 'Fighting fire';
+      if (inActive(s, nx, ny) && cellAt(s, nx, ny).state === 'burning') return L.statusFighting;
     }
   if (t.water < T.waterCapacity) {
     let nearWater = false;
@@ -42,23 +43,23 @@ function engineStatus(s: GameState, t: Truck): string {
           nearWater = true;
           break;
         }
-    if (nearWater) return 'Refilling';
+    if (nearWater) return L.statusRefilling;
   }
-  return 'Standing by';
+  return L.statusStandingBy;
 }
 
 function bomberStatus(b: Bomber): string {
   switch (b.state) {
     case 'ready':
-      return 'Ready';
+      return L.bomberReady;
     case 'outbound':
-      return 'Outbound';
+      return L.bomberOutbound;
     case 'dropping':
-      return 'Dropping';
+      return L.bomberDropping;
     case 'returning':
-      return 'Returning';
+      return L.bomberReturning;
     case 'reloading':
-      return 'Reloading';
+      return L.bomberReloading;
   }
 }
 
@@ -69,19 +70,18 @@ function bomberLoad(b: Bomber): number {
 }
 
 function crewStatus(c: Crew): string {
-  if (c.dangerTicks > 0) return 'IN DANGER — pull out!';
-  if (c.path.length > 0) return 'En route';
-  if (c.jobs.length > 0) return 'Cutting';
-  return 'Standing by';
+  if (c.dangerTicks > 0) return L.statusDanger;
+  if (c.path.length > 0) return L.statusEnRoute;
+  if (c.jobs.length > 0) return L.statusCutting;
+  return L.statusStandingBy;
 }
 
 const SELECTION_TEXT: Record<Tool, string> = {
-  engine:
-    'Click the map — the nearest engine responds. Click an engine card to take direct control.',
-  evac: 'Evacuation: click a village to order it out. Clearing takes time — order early.',
-  bomber: 'Water bomber: click where the retardant line should start.',
-  tower: 'Watch tower: click the map to raise it. It reports fires around it almost instantly.',
-  crew: 'Fire crew: click vegetation tiles to cut them into a firebreak line. Esc when done.',
+  engine: L.selEngine,
+  evac: L.selEvac,
+  bomber: L.selBomber,
+  tower: L.selTower,
+  crew: L.selCrew,
 };
 
 /**
@@ -176,7 +176,7 @@ export class Hud {
   private applySeason(): void {
     const s = this.state;
     this.year.textContent = String(s.seasonYear);
-    this.dryness.textContent = `dryness ${Math.round(s.dryness * 100)}%`;
+    this.dryness.textContent = L.dryness(Math.round(s.dryness * 100));
     this.animals.hidden = s.seasonYear < reveals.animals;
     this.houses.hidden = s.seasonYear < reveals.houses;
     this.ffs.hidden = s.seasonYear < reveals.firefighters;
@@ -186,12 +186,12 @@ export class Hud {
       const btn = this.toolButtons[tool];
       const locked = s.seasonYear < unlockYear;
       btn.classList.toggle('locked', locked);
-      btn.title = locked ? `Unlocks in ${unlockYear}` : title;
+      btn.title = locked ? L.ttUnlocks(unlockYear) : title;
     };
-    lock('evac', unlocks.evacuate, 'Evacuation order — click a village to move its people out');
-    lock('bomber', unlocks.bomber, 'Water bomber — click the map to call a drop');
-    lock('tower', unlocks.towers, 'Watch tower — place it to detect fires early');
-    lock('crew', unlocks.crew, 'Fire crew — click vegetation to cut a firebreak line');
+    lock('evac', unlocks.evacuate, L.ttEvac);
+    lock('bomber', unlocks.bomber, L.ttBomber);
+    lock('tower', unlocks.towers, L.ttTower);
+    lock('crew', unlocks.crew, L.ttCrew);
   }
 
   private buildCards(): void {
@@ -203,7 +203,7 @@ export class Hud {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'engine-card';
-      card.innerHTML = `<strong>Engine ${t.id}</strong><span class="status"></span><div class="waterbar"><div></div></div>`;
+      card.innerHTML = `<strong>${L.cardEngine(t.id)}</strong><span class="status"></span><div class="waterbar"><div></div></div>`;
       card.addEventListener('click', () => this.onPinToggle(t.id));
       this.engines.append(card);
       this.cards.set(t.id, card);
@@ -212,7 +212,7 @@ export class Hud {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'engine-card';
-      card.innerHTML = `<strong>Bomber ${b.id}</strong><span class="status"></span><div class="waterbar"><div></div></div>`;
+      card.innerHTML = `<strong>${L.cardBomber(b.id)}</strong><span class="status"></span><div class="waterbar"><div></div></div>`;
       card.addEventListener('click', () => this.onToolSelect('bomber'));
       this.engines.append(card);
       this.bomberCards.set(b.id, card);
@@ -221,7 +221,7 @@ export class Hud {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'engine-card';
-      card.innerHTML = `<strong>Crew ${c.id}</strong><span class="status"></span>`;
+      card.innerHTML = `<strong>${L.cardCrew(c.id)}</strong><span class="status"></span>`;
       card.addEventListener('click', () => this.onToolSelect('crew'));
       this.engines.append(card);
       this.crewCards.set(c.id, card);
@@ -240,41 +240,31 @@ export class Hud {
       const busy = s.villages.some((v) => v.evac === 'inProgress');
       const regrouping = !busy && s.tick < s.evacReadyAtTick;
       this.toolButtons.evac.classList.toggle('locked', busy || regrouping);
-      this.toolButtons.evac.title = busy
-        ? 'Emergency services are mid-evacuation — one village at a time'
-        : regrouping
-          ? 'Emergency services are regrouping'
-          : 'Evacuation order — click a village to move its people out';
+      this.toolButtons.evac.title = busy ? L.ttEvacBusy : regrouping ? L.ttEvacRegroup : L.ttEvac;
     }
     if (s.seasonYear >= unlocks.bomber) {
       const grounded = s.script.drought?.done === true;
       this.toolButtons.bomber.classList.toggle('locked', grounded);
-      this.toolButtons.bomber.title = grounded
-        ? 'Grounded — the drought left no water to drop'
-        : 'Water bomber — click the map to call a drop';
+      this.toolButtons.bomber.title = grounded ? L.ttBomberGrounded : L.ttBomber;
     }
     if (s.seasonYear >= unlocks.towers) {
       const depleted = s.towersAvailable <= 0;
       this.toolButtons.tower.classList.toggle('locked', depleted);
-      this.toolButtons.tower.title = depleted
-        ? 'All towers placed'
-        : 'Watch tower — place it to detect fires early';
+      this.toolButtons.tower.title = depleted ? L.ttTowersDone : L.ttTower;
     }
     if (s.seasonYear >= unlocks.crew) {
       const gone = s.crews.length === 0;
       this.toolButtons.crew.classList.toggle('locked', gone);
-      this.toolButtons.crew.title = gone
-        ? 'The crew is gone this season'
-        : 'Fire crew — click vegetation to cut a firebreak line';
+      this.toolButtons.crew.title = gone ? L.ttCrewGone : L.ttCrew;
     }
 
-    this.hectares.textContent = `${s.stats.hectaresBurnt} ha burnt`;
-    if (!this.animals.hidden) this.animals.textContent = `~${s.stats.animalsKilled} animals`;
-    if (!this.houses.hidden) this.houses.textContent = `${s.stats.housesLost} homes lost`;
-    if (!this.ffs.hidden) this.ffs.textContent = `${s.stats.firefightersLost} firefighters`;
-    if (!this.civs.hidden) this.civs.textContent = `${s.stats.civiliansLost} people`;
+    this.hectares.textContent = L.haBurnt(s.stats.hectaresBurnt);
+    if (!this.animals.hidden) this.animals.textContent = L.animalsTop(s.stats.animalsKilled);
+    if (!this.houses.hidden) this.houses.textContent = L.homesLostTop(s.stats.housesLost);
+    if (!this.ffs.hidden) this.ffs.textContent = L.firefightersTop(s.stats.firefightersLost);
+    if (!this.civs.hidden) this.civs.textContent = L.peopleTop(s.stats.civiliansLost);
     this.windarrow.style.transform = `rotate(${s.wind.dir}rad)`;
-    this.windspeed.textContent = `${Math.round(s.wind.str * 30)} km/h`;
+    this.windspeed.textContent = L.windKmh(Math.round(s.wind.str * 30));
     this.seasonfill.style.width = `${Math.min(100, (s.tick / s.seasonLen) * 100)}%`;
 
     this.towerCount.hidden = s.towersAvailable <= 0;
@@ -284,7 +274,7 @@ export class Hud {
       const t = s.trucks.find((tr) => tr.id === id);
       if (!t) {
         // Overrun this season — the card stays as a memorial.
-        this.markLost(card, `${T.crew} firefighters lost`);
+        this.markLost(card, L.lostFirefighters(T.crew));
         continue;
       }
       card.classList.toggle('pinned', t.id === pinnedTruckId);
@@ -292,7 +282,7 @@ export class Hud {
       const status = card.querySelector<HTMLSpanElement>('.status');
       if (status)
         status.textContent =
-          engineStatus(s, t) + (t.fatigue >= DR.fatigueGraceEvery ? ' · exhausted' : '');
+          engineStatus(s, t) + (t.fatigue >= DR.fatigueGraceEvery ? L.exhaustedSuffix : '');
       const bar = card.querySelector<HTMLDivElement>('.waterbar > div');
       if (bar) bar.style.width = `${(t.water / T.waterCapacity) * 100}%`;
     }
@@ -302,7 +292,7 @@ export class Hud {
       const status = card.querySelector<HTMLSpanElement>('.status');
       if (status)
         status.textContent =
-          s.script.drought?.done && b.state === 'ready' ? 'Grounded — drought' : bomberStatus(b);
+          s.script.drought?.done && b.state === 'ready' ? L.statusGroundedDrought : bomberStatus(b);
       const bar = card.querySelector<HTMLDivElement>('.waterbar > div');
       // Grounded by drought: the tank reads empty — there is no water to carry.
       const grounded =
@@ -312,7 +302,7 @@ export class Hud {
     for (const [id, card] of this.crewCards) {
       const c = s.crews.find((cr) => cr.id === id);
       if (!c) {
-        this.markLost(card, `${CU.crew} firefighters lost`);
+        this.markLost(card, L.lostFirefighters(CU.crew));
         continue;
       }
       card.classList.toggle('danger', c.dangerTicks > 0);
@@ -320,15 +310,15 @@ export class Hud {
       if (status)
         status.textContent =
           crewStatus(c) +
-          (c.jobs.length > 1 ? ` · ${c.jobs.length} cuts queued` : '') +
-          (c.fatigue >= DR.fatigueGraceEvery ? ' · exhausted' : '');
+          (c.jobs.length > 1 ? L.cutsQueued(c.jobs.length) : '') +
+          (c.fatigue >= DR.fatigueGraceEvery ? L.exhaustedSuffix : '');
     }
 
     this.selection.textContent =
       this.tool === 'engine' && pinnedTruckId !== null
-        ? `Controlling Engine ${pinnedTruckId} — click the map to send it. Esc to release.`
+        ? L.selControlling(pinnedTruckId)
         : this.tool === 'bomber' && this.bomberAnchorSet
-          ? 'Now click a second cell — the line runs from the anchor toward it. Esc to cancel.'
+          ? L.selBomberAim
           : SELECTION_TEXT[this.tool];
   }
 
@@ -338,16 +328,16 @@ export class Hud {
     // but the game only speaks of it once the counter exists.
     const deaths = events.reduce((n, e) => (e.type === 'civilianDeaths' ? n + e.count : n), 0);
     if (deaths > 0 && this.state.seasonYear >= reveals.civilians)
-      this.pushAlert(
-        deaths === 1 ? '1 resident did not escape.' : `${deaths} residents did not escape.`,
-      );
+      this.pushAlert(L.alertResidents(deaths));
     for (const ev of events) {
       switch (ev.type) {
         case 'fireDetected':
           // A new fire cancels any standing wind-down notice — it is no longer true.
           this.dropAlerts((kind) => kind === 'winddown');
           this.pushAlert(
-            `Fire reported — grid ${String.fromCharCode(65 + Math.floor((ev.x - this.state.bounds.x0) / 6))}${Math.floor((ev.y - this.state.bounds.y0) / 4) + 1}`,
+            L.alertFire(
+              `${String.fromCharCode(65 + Math.floor((ev.x - this.state.bounds.x0) / 6))}${Math.floor((ev.y - this.state.bounds.y0) / 4) + 1}`,
+            ),
           );
           break;
         case 'engineDispatched':
@@ -360,24 +350,22 @@ export class Hud {
           this.flashCard(this.crewCards.get(ev.crewId));
           break;
         case 'evacuationStarted':
-          this.pushAlert('Evacuation ordered — the village is on the move.');
+          this.pushAlert(L.alertEvacStarted);
           break;
         case 'evacuationComplete':
-          this.pushAlert('Village clear — everyone is out.');
+          this.pushAlert(L.alertEvacComplete);
           break;
         case 'bomberDrop':
-          this.pushAlert('Water drop on target.');
+          this.pushAlert(L.alertDrop);
           break;
         case 'towerPlaced':
-          this.pushAlert('Watch tower raised.');
+          this.pushAlert(L.alertTower);
           break;
         case 'civilianDeaths':
           break; // coalesced above
         case 'crewDanger':
           this.pushAlert(
-            ev.unit === 'engine'
-              ? `Engine ${ev.unitId} requesting pull-out — get them clear!`
-              : 'Fire crew requesting pull-out — get them clear!',
+            ev.unit === 'engine' ? L.alertDangerEngine(ev.unitId) : L.alertDangerCrew,
             `danger-${ev.unit}-${ev.unitId}`,
           );
           break;
@@ -386,23 +374,21 @@ export class Hud {
           this.dropAlerts((kind) => kind === `danger-${ev.unit}-${ev.unitId}`);
           this.pushAlert(
             ev.unit === 'engine'
-              ? `MAYDAY — Engine ${ev.unitId} overrun. ${ev.firefighters} firefighters lost.`
-              : `MAYDAY — the fire crew was overrun. ${ev.firefighters} firefighters lost.`,
+              ? L.alertMaydayEngine(ev.unitId, ev.firefighters)
+              : L.alertMaydayCrew(ev.firefighters),
           );
           break;
         case 'windShift':
-          this.pushAlert('Wind shift — fronts will turn.');
+          this.pushAlert(L.alertWindShift);
           break;
         case 'reliefRain':
-          this.pushAlert('Rain moves through the valley.');
+          this.pushAlert(L.alertRain);
           break;
         case 'riverDry':
-          this.pushAlert(
-            'Extreme drought — the river has run dry. No refills, the bombers are grounded, and fire may cross the bed.',
-          );
+          this.pushAlert(L.alertRiverDry);
           break;
         case 'seasonWindingDown':
-          this.pushAlert('All fires are out — the season winds down.', 'winddown');
+          this.pushAlert(L.alertWinddown, 'winddown');
           break;
         case 'seasonEnded':
           this.dropAlerts(() => true); // the debrief takes over
@@ -441,12 +427,11 @@ export class Hud {
     this.bClimate.hidden = avg === undefined;
     this.bClimateSrc.hidden = avg === undefined;
     if (avg !== undefined) {
-      this.bDegNum.textContent = `≈ +${avg} °C`;
-      this.bDrought.textContent = `now every ~${returnPeriodYears('drought', s.seasonYear)} yrs`;
-      this.bHeat.textContent = `now every ~${returnPeriodYears('heat', s.seasonYear)} yrs`;
-      this.bPeak.textContent = `≈ +${hotDayAt(s.seasonYear)} °C`;
-      this.bClimate.title =
-        'Central estimate vs pre-industrial for a middle-of-the-road emissions pathway (IPCC AR6, ≈SSP2-4.5). Return periods interpolate the AR6 SPM frequency increases for once-per-decade droughts (drying regions) and heat events over land. Hot extremes rise roughly 1.5–2× faster than the global mean — the peak-day figure uses the low end of that range.';
+      this.bDegNum.textContent = L.degNum(avg);
+      this.bDrought.textContent = L.returnEvery(returnPeriodYears('drought', s.seasonYear));
+      this.bHeat.textContent = L.returnEvery(returnPeriodYears('heat', s.seasonYear));
+      this.bPeak.textContent = L.peakPlus(hotDayAt(s.seasonYear));
+      this.bClimate.title = L.climateTooltip;
     }
     this.bGrowth.hidden = !grew;
     const unlock = unlockNotes[s.seasonYear];
@@ -467,36 +452,35 @@ export class Hud {
     isFinal: boolean,
     unfought: Stats | null = null,
   ): void {
-    const lines = [`${season.hectaresBurnt} hectares burnt`];
-    if (year >= reveals.animals) lines.push(`~${season.animalsKilled} animals killed`);
+    const lines = [L.reportHa(season.hectaresBurnt)];
+    if (year >= reveals.animals) lines.push(L.reportAnimals(season.animalsKilled));
     if (year >= reveals.houses && season.housesLost > 0)
-      lines.push(`${season.housesLost} homes lost`);
+      lines.push(L.reportHomes(season.housesLost));
     if (year >= reveals.firefighters && season.firefightersLost > 0)
-      lines.push(`${season.firefightersLost} firefighters lost`);
+      lines.push(L.reportFirefighters(season.firefightersLost));
     if (year >= reveals.civilians && season.civiliansLost > 0)
-      lines.push(`${season.civiliansLost} people lost`);
+      lines.push(L.reportPeople(season.civiliansLost));
     this.report.textContent = lines.join(' · ');
 
     if (isFinal) {
-      this.dTitle.textContent = 'The Long Defense — 2070';
+      this.dTitle.textContent = L.debriefFinalTitle;
       this.dFinal.hidden = false;
       this.dCampaign.hidden = true;
       this.fillFinale(campaign, unfought);
-      this.restartBtn.textContent = 'Start a new campaign';
+      this.restartBtn.textContent = L.btnNewCampaign;
     } else {
-      this.dTitle.textContent = 'Season over — the rains arrive';
+      this.dTitle.textContent = L.debriefSeasonTitle;
       this.dFinal.hidden = true;
       this.dCampaign.hidden = false;
-      this.dCampaign.textContent =
-        year > 2026 ? `Campaign so far: ${statLine(campaign, year)}` : '';
-      this.restartBtn.textContent = 'Continue';
+      this.dCampaign.textContent = year > 2026 ? L.campaignSoFar(statLine(campaign, year)) : '';
+      this.restartBtn.textContent = L.btnContinue;
     }
     this.debrief.hidden = false;
   }
 
   /** The retrospective: your 44 years against the same valley left unfought. */
   private fillFinale(campaign: Stats, unfought: Stats | null): void {
-    const num = (n: number) => n.toLocaleString('en-US');
+    const num = (n: number) => fmt(n);
     const cell = (id: string, text: string) => {
       el<HTMLTableCellElement>(id).textContent = text;
     };
@@ -504,8 +488,8 @@ export class Hud {
     el<HTMLTableElement>('d-compare').hidden = !hasComparison;
     this.dSaved.hidden = !hasComparison;
     if (unfought) {
-      cell('c-ha-you', `${num(campaign.hectaresBurnt)} ha`);
-      cell('c-ha-not', `${num(unfought.hectaresBurnt)} ha`);
+      cell('c-ha-you', L.haShort(campaign.hectaresBurnt));
+      cell('c-ha-not', L.haShort(unfought.hectaresBurnt));
       cell('c-an-you', `~${num(campaign.animalsKilled)}`);
       cell('c-an-not', `~${num(unfought.animalsKilled)}`);
       cell('c-ho-you', num(campaign.housesLost));
@@ -515,11 +499,11 @@ export class Hud {
       const ha = Math.max(0, unfought.hectaresBurnt - campaign.hectaresBurnt);
       const homes = Math.max(0, unfought.housesLost - campaign.housesLost);
       const lives = Math.max(0, unfought.civiliansLost - campaign.civiliansLost);
-      this.dSaved.textContent = `Your defense saved ≈ ${num(ha)} hectares, ${num(homes)} homes and ${num(lives)} lives.`;
+      this.dSaved.textContent = L.savedLine(ha, homes, lives);
     }
     this.dCost.hidden = campaign.firefightersLost === 0;
     if (campaign.firefightersLost > 0)
-      this.dCost.textContent = `It cost ${campaign.firefightersLost} firefighters. They held lines that could not all be held.`;
+      this.dCost.textContent = L.costLine(campaign.firefightersLost);
   }
 
   /** Client-side feedback (invalid order, nothing available) — same channel as sim alerts. */

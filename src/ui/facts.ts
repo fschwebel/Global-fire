@@ -1,8 +1,11 @@
+import { locale } from './i18n';
+
 /**
  * One sourced climate fact per season briefing (docs/design/progression.md §1.3).
  * Sources are tracked in data/facts.json; re-verification is an M4 release gate.
+ * Translations must keep the figures and attributions exactly.
  */
-export const briefingFacts: Record<number, string> = {
+const briefingFactsEn: Record<number, string> = {
   2026: 'The global fire-weather season lengthened ~19% between 1979 and 2013. — Jolly et al., Nature Communications, 2015',
   2030: 'The UN projects extreme fire events to increase by up to 14% by 2030. — UNEP, Spreading like Wildfire, 2022',
   2035: 'In 2022, drought-stricken Europe suffered its second-worst fire season on record: ~837,000 hectares burnt in the EU. — EFFIS/JRC',
@@ -15,8 +18,24 @@ export const briefingFacts: Record<number, string> = {
   2070: 'Australia’s Black Summer generated dozens of fire-triggered thunderstorms — fires so large they made their own weather.',
 };
 
+const briefingFactsFr: Record<number, string> = {
+  2026: 'La saison mondiale de temps propice aux feux s’est allongée d’environ 19 % entre 1979 et 2013. — Jolly et al., Nature Communications, 2015',
+  2030: 'L’ONU projette une hausse des feux extrêmes pouvant atteindre 14 % d’ici 2030. — PNUE, Spreading like Wildfire, 2022',
+  2035: 'En 2022, une Europe frappée par la sécheresse a subi sa deuxième pire saison de feux jamais enregistrée : ~837 000 hectares brûlés dans l’UE. — EFFIS/JRC',
+  2040: 'La surface brûlée annuelle moyenne aux États-Unis a environ doublé entre les années 1990 et les années 2010. — NIFC',
+  2045: 'Pendant le dôme de chaleur du Pacifique Nord-Ouest en 2021, Lytton (Colombie-Britannique) a atteint 49,6 °C — et a brûlé entièrement le lendemain.',
+  2050: 'L’ONU projette une hausse des feux extrêmes pouvant atteindre 30 % d’ici 2050, même avec de fortes baisses d’émissions. — PNUE, 2022',
+  2055: 'La saison record du Canada en 2023 a brûlé plus de 15 millions d’hectares — plus du double du record précédent — et a commencé anormalement tôt, en mai.',
+  2060: 'Après un feu de haute sévérité dans un climat plus chaud, certaines forêts ne se régénèrent plus du tout et basculent définitivement en broussailles.',
+  2065: 'Le Camp Fire de 2018 a détruit ~18 800 bâtiments et tué 85 personnes à Paradise, en Californie.',
+  2070: 'Le Black Summer australien a déclenché des dizaines d’orages générés par les feux — des incendies si vastes qu’ils fabriquaient leur propre météo.',
+};
+
+export const briefingFacts: Record<number, string> =
+  locale === 'fr' ? briefingFactsFr : briefingFactsEn;
+
 /** "New this season" briefing line — each means arrives free, reassigned to the sector. */
-export const unlockNotes: Record<number, string> = {
+const unlockNotesEn: Record<number, string> = {
   2030: 'New this season: a water bomber, flying in from beyond the valley. Arm 🛩, click where the retardant line starts, then a second cell to aim it.',
   2035: 'New this season: evacuation orders. Arm 📢 and click a village — services move one village at a time, so choose who goes first.',
   2040: 'New this season: two watch towers. Arm 🗼 and place them where nobody would call a fire in — a tower reports smoke almost instantly.',
@@ -26,6 +45,19 @@ export const unlockNotes: Record<number, string> = {
   2060: 'A fourth watch tower arrives — the sector has grown, and your eyes must grow with it.',
   2070: 'A fifth watch tower arrives, for whatever it can still see.',
 };
+
+const unlockNotesFr: Record<number, string> = {
+  2030: 'Nouveau cette saison : un bombardier d’eau, venu d’au-delà de la vallée. Armez 🛩, cliquez là où la ligne de retardant commence, puis une seconde case pour la diriger.',
+  2035: 'Nouveau cette saison : les ordres d’évacuation. Armez 📢 et cliquez sur un village — les secours déplacent un village à la fois, choisissez qui part en premier.',
+  2040: 'Nouveau cette saison : deux tours de guet. Armez 🗼 et placez-les là où personne ne signalerait un feu — une tour signale la fumée presque instantanément.',
+  2045: 'À partir de cette saison, le feu peut submerger une unité : si un véhicule est encerclé sans issue, vous le perdez. Quand la radio demande le repli, agissez.',
+  2050: 'Nouveau cette saison : une équipe forestière (armez ⛏ et cliquez sur la végétation pour tailler un pare-feu ; toute case dégagée la met hors de danger) — et une troisième tour de guet.',
+  2055: 'Nouveau cette saison : un second bombardier d’eau rejoint le secteur.',
+  2060: 'Une quatrième tour de guet arrive — le secteur a grandi, vos yeux doivent grandir avec.',
+  2070: 'Une cinquième tour de guet arrive, pour ce qu’elle peut encore voir.',
+};
+
+export const unlockNotes: Record<number, string> = locale === 'fr' ? unlockNotesFr : unlockNotesEn;
 
 /**
  * Global-mean warming vs pre-industrial per season (°C): central estimates for

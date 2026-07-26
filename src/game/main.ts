@@ -4,6 +4,7 @@ import { createSeason } from '../sim/scenario';
 import type { Cell, GameState, Stats } from '../sim/state';
 import { dropLineCells } from '../sim/units';
 import { Hud, type Tool } from '../ui/hud';
+import { L, applyStaticText } from '../ui/i18n';
 import { MapViewport } from '../ui/viewport';
 import { simulateUnfoughtCampaign } from './counterfactual';
 import { GameLoop } from './loop';
@@ -99,6 +100,9 @@ function togglePin(truckId: number): void {
   pinnedTruckId = pinnedTruckId === truckId ? null : truckId;
   if (pinnedTruckId !== null) setTool('engine');
 }
+
+// Static page text goes to the browser's language before anything renders.
+applyStaticText();
 
 const canvas = document.getElementById('map') as HTMLCanvasElement;
 const renderer = new Renderer(canvas, state);
@@ -234,11 +238,11 @@ mapwrap.addEventListener('click', (ev) => {
     }
     case 'evac': {
       if (state.villages.some((v) => v.evac === 'inProgress')) {
-        hud.notify('Emergency services are mid-evacuation — one village at a time.');
+        hud.notify(L.nfEvacBusy);
         break;
       }
       if (state.tick < state.evacReadyAtTick) {
-        hud.notify('Emergency services are regrouping — the next order must wait.');
+        hud.notify(L.nfEvacRegroup);
         break;
       }
       // The click names a village, not a tile.
@@ -255,12 +259,12 @@ mapwrap.addEventListener('click', (ev) => {
     }
     case 'bomber':
       if (state.script.drought?.done) {
-        hud.notify('The drought has grounded the bombers — there is no water to drop.');
+        hud.notify(L.nfBomberGrounded);
         break;
       }
       // Nothing ready must not swallow a two-click order in silence.
       if (!state.bombers.some((b) => b.state === 'ready')) {
-        hud.notify('No bomber ready — rearming beyond the valley.');
+        hud.notify(L.nfNoBomberReady);
         break;
       }
       // Two-click order: anchor the line, then aim it.
@@ -279,13 +283,13 @@ mapwrap.addEventListener('click', (ev) => {
       break;
     case 'tower': {
       if (state.towersAvailable <= 0) {
-        hud.notify('No towers left to place.');
+        hud.notify(L.nfNoTowers);
         setTool('engine');
         break;
       }
       const cell = state.grid[y * state.w + x];
       if (!cell || cell.type === 'water' || cell.state === 'burning') {
-        hud.notify("That ground won't take a tower.");
+        hud.notify(L.nfBadTowerGround);
         break;
       }
       enqueueOrder({ type: 'placeTower', x, y }, x, y);
@@ -294,7 +298,7 @@ mapwrap.addEventListener('click', (ev) => {
     }
     case 'crew':
       if (state.crews.length === 0) {
-        hud.notify('The crew is gone this season.');
+        hud.notify(L.nfCrewGone);
         break;
       }
       enqueueOrder({ type: 'crewCut', x, y }, x, y);
