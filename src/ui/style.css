@@ -502,20 +502,40 @@ body {
   line-height: 1.6;
 }
 
+#d-links-head {
+  font-size: 12px;
+  color: #9aa392;
+}
+
 #d-links {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
+  margin-top: -6px;
 }
 
 #d-links a {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   color: #cdd8c2;
   text-decoration: none;
   font-size: 13px;
   border: 1px solid #3a4536;
   background: #1a2118;
   padding: 6px 12px;
+  text-align: left;
+}
+
+#d-links a .label {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+#d-links a .dest {
+  font-size: 11px;
+  color: #7f887b;
 }
 
 #d-links a:hover {
