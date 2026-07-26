@@ -137,8 +137,10 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
       s.stats.animalsKilled += habitatPerTile[c.type] ?? 0;
       if (c.type === 'house') {
         s.stats.housesLost += 1;
-        c.baseType = 'grass'; // homes are not rebuilt; the village shrinks
         c.occupants = 0;
+        // Some homes are rebuilt years later (baseType stays 'house' as the
+        // marker); the rest revert to grass — the village shrinks.
+        if (s.rng() >= regrowth.houseRebuildChance) c.baseType = 'grass';
       } else if (c.type === 'dense' && s.rng() < regrowth.denseConversionChance) {
         c.baseType = 'grass'; // high-severity burn: permanent conversion
       }

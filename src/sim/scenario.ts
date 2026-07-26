@@ -306,6 +306,15 @@ function applyRegrowth(cell: Cell, year: number): void {
   if (cell.burntYear <= 0) return;
   const age = year - cell.burntYear;
   if (cell.state === 'burnt') cell.state = 'unburnt';
+  if (cell.baseType === 'house') {
+    // A lot marked for rebuilding (burnout roll) lies as scarred grass until
+    // the house goes up again and a new family moves in.
+    if (age >= RG.houseRebuildAfter) {
+      cell.type = 'house';
+      if (cell.occupants === 0) cell.occupants = M.occupantsMin;
+    } else if (age >= RG.grassAfter) cell.type = 'grass';
+    return;
+  }
   const vegetation =
     cell.baseType === 'dense' || cell.baseType === 'sparse' || cell.baseType === 'grass';
   if (age >= RG.fullAfter) cell.type = cell.baseType;

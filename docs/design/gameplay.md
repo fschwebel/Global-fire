@@ -177,7 +177,7 @@ Cost: up to 2,400 cells (only the active sector is stepped) × ≤ 8 neighbour c
 
 ### 3.4 Scars and regrowth (applied across the gap between seasons)
 
-Burnt vegetation regrows on a real-years clock, advanced by the 4–5 years that pass between seasons: ash → scarred grassland (+2 yr; the ash tint stays visible ~9 yr) → sparse (+6 yr, dense base only) → original type (+12 yr). Infrastructure (roads, firebreaks) is repaired to its base type by the next season. Dense forest that burns out rolls **25 % permanent conversion** to grassland. Burnt houses are never rebuilt: the tile reverts to grass, occupants zero — the village shrinks. A scarred map carries less fuel, which keeps bad seasons from snowballing.
+Burnt vegetation regrows on a real-years clock, advanced by the 4–5 years that pass between seasons: ash → scarred grassland (+2 yr; the ash tint stays visible ~9 yr) → sparse (+6 yr, dense base only) → original type (+12 yr). Infrastructure (roads, firebreaks) is repaired to its base type by the next season. Dense forest that burns out rolls **25 % permanent conversion** to grassland. A burnt house rolls **50 % rebuilding**: a rebuilt lot lies as scarred grass for **5 years**, then the house stands again with a new family; the rest revert to grass for good — the village shrinks. A scarred map carries less fuel, which keeps bad seasons from snowballing.
 
 ---
 

@@ -63,8 +63,9 @@ function bootState(): GameState {
         if (!cell) continue;
         cell.burntYear = scar.y;
         cell.baseType = scar.b;
-        // Burnt houses lost their occupants before the save was written.
-        if (cell.type === 'house' && scar.b !== 'house') cell.occupants = 0;
+        // Burnt houses lost their occupants before the save was written; the
+        // regrowth clock re-populates any lot that has since been rebuilt.
+        if (cell.type === 'house') cell.occupants = 0;
       }
       return createSeason(CAMPAIGN_SEED, seasonIndex, pristine.grid);
     } catch {

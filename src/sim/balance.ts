@@ -119,6 +119,10 @@ export const regrowth = {
   fullAfter: 12,
   /** High-severity dense burns convert permanently to grassland. */
   denseConversionChance: 0.25,
+  /** A burnt home has this chance of being rebuilt; the rest are gone for good. */
+  houseRebuildChance: 0.5,
+  /** Years before a rebuilt home stands again (the lot lies as scarred grass until then). */
+  houseRebuildAfter: 5,
   /** Ash tint stays visible on regrown ground for this many years. */
   scarVisibleYears: 9,
 };

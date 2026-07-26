@@ -344,9 +344,9 @@ describe('campaign', () => {
       expect(c.burntYear).toBe(2026);
       const vegetation =
         c.baseType === 'dense' || c.baseType === 'sparse' || c.baseType === 'grass';
-      // Vegetation returns as scarred grass; infrastructure (roads, firebreaks)
-      // is repaired to its base type by the next season.
-      if (vegetation) expect(c.type).toBe('grass');
+      // Vegetation and rebuild-marked home lots return as scarred grass;
+      // infrastructure (roads, firebreaks) is repaired by the next season.
+      if (vegetation || c.baseType === 'house') expect(c.type).toBe('grass');
       else expect(c.type).toBe(c.baseType);
     }
 
@@ -428,18 +428,35 @@ describe('campaign', () => {
     expect(y2040.grid[target]!.type).toBe('dense');
   });
 
-  it('burnt houses never come back: the village shrinks for good', () => {
+  it('a home not marked for rebuilding stays lost for good', () => {
     const base = createSeason(42, 0);
     const houseIdx = base.grid.findIndex((c) => c.type === 'house');
     expect(houseIdx).toBeGreaterThanOrEqual(0);
     const cell = base.grid[houseIdx]!;
     cell.state = 'burnt';
     cell.burntYear = 2026;
-    cell.baseType = 'grass'; // stamped at burnout in step()
+    cell.baseType = 'grass'; // burnout roll failed: the village shrinks
     cell.occupants = 0;
     const later = createSeason(42, 5, base.grid); // 2050, 24 years on
     expect(later.grid[houseIdx]!.type).toBe('grass');
     expect(later.grid[houseIdx]!.occupants).toBe(0);
+  });
+
+  it('a home marked for rebuilding returns after 5 years with a new family', () => {
+    const base = createSeason(42, 0);
+    const houseIdx = base.grid.findIndex((c) => c.type === 'house');
+    expect(houseIdx).toBeGreaterThanOrEqual(0);
+    const cell = base.grid[houseIdx]!;
+    cell.state = 'burnt';
+    cell.burntYear = 2026;
+    cell.baseType = 'house'; // burnout roll passed: marked for rebuilding
+    cell.occupants = 0;
+    const y2030 = createSeason(42, 1, base.grid); // 4 years on: still an empty lot
+    expect(y2030.grid[houseIdx]!.type).toBe('grass');
+    expect(y2030.grid[houseIdx]!.occupants).toBe(0);
+    const y2035 = createSeason(42, 2, y2030.grid); // 9 years on: rebuilt
+    expect(y2035.grid[houseIdx]!.type).toBe('house');
+    expect(y2035.grid[houseIdx]!.occupants).toBeGreaterThan(0);
   });
 
   it('climate escalation: 2070 unfought burns far more than 2026 (same seed)', () => {
