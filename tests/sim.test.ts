@@ -223,9 +223,30 @@ describe('trucks', () => {
     }
   });
 
-  it('trucks refill at the station', () => {
+  it('trucks refill beside water (there is no station)', () => {
     const s = createSeason(42, 0);
     const t = s.trucks[0]!;
+    // Park the engine beside the river.
+    let spot: { x: number; y: number } | null = null;
+    outer: for (let y = s.bounds.y0; y < s.bounds.y1; y++)
+      for (let x = s.bounds.x0; x < s.bounds.x1; x++) {
+        if (s.grid[y * s.w + x]!.type !== 'water') continue;
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const) {
+          const c = s.grid[(y + dy) * s.w + (x + dx)];
+          if (c && c.type !== 'water') {
+            spot = { x: x + dx, y: y + dy };
+            break outer;
+          }
+        }
+      }
+    expect(spot).not.toBeNull();
+    t.x = spot!.x;
+    t.y = spot!.y;
     t.water = 0;
     for (let i = 0; i < 10; i++) step(s);
     expect(t.water).toBeGreaterThan(0);
@@ -265,11 +286,11 @@ describe('map realism', () => {
     }
   });
 
-  it('every piece of land is reachable from the station (bridges where needed)', () => {
+  it('every piece of land is reachable from the crossroads (bridges where needed)', () => {
     for (const seed of [42, 7, 99, 1234, 555]) {
       const s = createSeason(seed, 9);
       const reached = new Uint8Array(s.w * s.h);
-      const start = s.station.y * s.w + s.station.x;
+      const start = s.center.y * s.w + s.center.x;
       reached[start] = 1;
       const queue = [start];
       while (queue.length > 0) {
@@ -382,14 +403,14 @@ describe('campaign', () => {
     }
   });
 
-  it('the sector always contains the station and at least one village', () => {
+  it('the sector always contains the crossroads and at least one village', () => {
     for (let idx = 0; idx <= 9; idx++) {
       const s = createSeason(42, idx);
       expect(
-        s.station.x >= s.bounds.x0 &&
-          s.station.x < s.bounds.x1 &&
-          s.station.y >= s.bounds.y0 &&
-          s.station.y < s.bounds.y1,
+        s.center.x >= s.bounds.x0 &&
+          s.center.x < s.bounds.x1 &&
+          s.center.y >= s.bounds.y0 &&
+          s.center.y < s.bounds.y1,
       ).toBe(true);
       let housesInside = 0;
       for (let y = s.bounds.y0; y < s.bounds.y1; y++)
@@ -576,6 +597,7 @@ describe('unlockable means', () => {
     expect(createSeason(42, 0).bombers.length).toBe(0);
     expect(createSeason(42, 0).crews.length).toBe(0);
     expect(createSeason(42, 0).towersAvailable).toBe(0);
+    expect(createSeason(42, 1).bombers.length).toBe(1); // bombers now lead, 2030
     expect(createSeason(42, 2).bombers.length).toBe(1);
     expect(createSeason(42, 3).towersAvailable).toBe(2);
     expect(createSeason(42, 5).crews.length).toBe(1);
@@ -583,14 +605,14 @@ describe('unlockable means', () => {
   });
 
   it('evacuation orders are refused before their unlock season', () => {
-    const s = createSeason(42, 0); // 2026
+    const s = createSeason(42, 1); // 2030: bombers yes, evacuations not yet
     const events = step(s, [{ type: 'evacuate', villageId: 1 }]);
     expect(events.some((e) => e.type === 'evacuationStarted')).toBe(false);
     expect(s.villages[0]!.evac).toBe('none');
   });
 
   it('an evacuated village loses no residents when its homes burn', () => {
-    const s = createSeason(42, 1); // 2030
+    const s = createSeason(42, 2); // 2035
     const events = step(s, [{ type: 'evacuate', villageId: 1 }]);
     expect(events.some((e) => e.type === 'evacuationStarted')).toBe(true);
     expect(s.villages[0]!.evac).toBe('inProgress');
@@ -611,7 +633,7 @@ describe('unlockable means', () => {
   });
 
   it('an unevacuated burning home costs lives', () => {
-    const s = createSeason(42, 1); // 2030
+    const s = createSeason(42, 2); // 2035
     const h = villageHouse(s, 1);
     const expected = Math.round(h.cell.occupants * evac.mortalityNone);
     expect(expected).toBeGreaterThan(0);
@@ -626,7 +648,7 @@ describe('unlockable means', () => {
 
   it('a water bomber flies out, drops on target, and cycles back to ready', () => {
     const s = createSeason(42, 2); // 2035
-    // A burning patch away from the station.
+    // A burning patch away from the crossroads.
     const tx = s.bounds.x0 + 8;
     const ty = s.bounds.y0 + 8;
     let target: { x: number; y: number } | null = null;
@@ -730,8 +752,8 @@ describe('unlockable means', () => {
     outer: for (let ring = 2; ring < 10 && !target; ring++)
       for (let dy = -ring; dy <= ring; dy++)
         for (let dx = -ring; dx <= ring; dx++) {
-          const x = s.station.x + dx;
-          const y = s.station.y + dy;
+          const x = s.center.x + dx;
+          const y = s.center.y + dy;
           if (x < s.bounds.x0 || y < s.bounds.y0 || x >= s.bounds.x1 || y >= s.bounds.y1) continue;
           const c = s.grid[y * s.w + x]!;
           if (c.type === 'grass' || c.type === 'sparse') {
@@ -918,9 +940,9 @@ describe('firefighter danger rule', () => {
     let veg: { x: number; y: number } | null = null;
     outer: for (let dy = -6; dy <= 6; dy++)
       for (let dx = -6; dx <= 6; dx++) {
-        const c = s.grid[(s.station.y + dy) * s.w + (s.station.x + dx)]!;
+        const c = s.grid[(s.center.y + dy) * s.w + (s.center.x + dx)]!;
         if (c.type === 'grass' || c.type === 'sparse') {
-          veg = { x: s.station.x + dx, y: s.station.y + dy };
+          veg = { x: s.center.x + dx, y: s.center.y + dy };
           break outer;
         }
       }
@@ -928,7 +950,7 @@ describe('firefighter danger rule', () => {
     step(s, [{ type: 'crewCut', x: veg!.x, y: veg!.y }]);
     expect(crew.jobs.length).toBe(1);
 
-    const road = s.station; // the station tile is a road
+    const road = s.center; // the crossroads tile is a road
     step(s, [{ type: 'crewCut', x: road.x, y: road.y }]);
     expect(crew.jobs.length).toBe(0);
     for (let i = 0; i < 30 && !(crew.x === road.x && crew.y === road.y); i++) step(s);

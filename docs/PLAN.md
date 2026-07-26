@@ -37,8 +37,8 @@ These resolve every contradiction found in design review. Each design doc restat
 | Season | Type | New tool (granted free) | Metric revealed | Signature beat |
 |---|---|---|---|---|
 | 2026 | Tutorial | Fire trucks ×2 | **Burnt hectares** | Fire called in ≤5 s of season start; no prep phase; one scripted wind shift |
-| 2030 | Ordinary | Evacuation orders | **Animals killed** | A fire drifts toward an outlying hamlet — first evacuation decision |
-| 2035 | **SPIKE — The Long Drought** | Water bomber ×1 | **Houses lost** | Two simultaneous fires; wildlife concentrated at shrinking waterholes |
+| 2030 | Ordinary | Water bomber ×1 | **Animals killed** | Air power arrives from beyond the valley |
+| 2035 | **SPIKE — The Long Drought** | Evacuation orders | **Houses lost** | Homes join the counter; the first evacuation decision |
 | 2040 | Ordinary | Watch towers | — | An undetected ignition grows for 7 s as a distant smoke column |
 | 2045 | **SPIKE — The Heat Dome** | — | **Firefighters lost** (revealed at zero, scripted near-miss) | Ember spotting + crew danger rule activate |
 | 2050 | Ordinary | Fire crews / controlled burns | **Population lost** | The WUI district is complete: decades of new houses inside the forest edge |

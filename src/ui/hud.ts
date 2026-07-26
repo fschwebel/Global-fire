@@ -35,8 +35,7 @@ function engineStatus(s: GameState, t: Truck): string {
       if (inActive(s, nx, ny) && cellAt(s, nx, ny).state === 'burning') return 'Fighting fire';
     }
   if (t.water < T.waterCapacity) {
-    const nearStation = Math.abs(t.x - s.station.x) <= 1 && Math.abs(t.y - s.station.y) <= 1;
-    let nearWater = nearStation;
+    let nearWater = false;
     for (let dy = -1; dy <= 1 && !nearWater; dy++)
       for (let dx = -1; dx <= 1; dx++)
         if (inActive(s, t.x + dx, t.y + dy) && cellAt(s, t.x + dx, t.y + dy).type === 'water') {
@@ -135,6 +134,9 @@ export class Hud {
   private crewCards = new Map<number, HTMLButtonElement>();
   private tool: Tool = 'engine';
   private bomberAnchorSet = false;
+  /** Live alerts age on GAME time — they hold while paused. Kind tags let events retire them. */
+  private liveAlerts: { div: HTMLDivElement; ms: number; kind: string }[] = [];
+  private lastUpdateAt = performance.now();
 
   constructor(
     private state: GameState,
@@ -155,6 +157,7 @@ export class Hud {
     this.applySeason();
     this.debrief.hidden = true;
     this.alerts.replaceChildren();
+    this.liveAlerts = [];
     this.buildCards();
   }
 
@@ -224,8 +227,29 @@ export class Hud {
     }
   }
 
-  update(pinnedTruckId: number | null): void {
+  update(pinnedTruckId: number | null, running = true): void {
     const s = this.state;
+    const now = performance.now();
+    const dt = Math.min(now - this.lastUpdateAt, 100);
+    this.lastUpdateAt = now;
+    if (running) this.ageAlerts(dt);
+
+    // A depleted resource reads as locked, with an honest tooltip.
+    if (s.seasonYear >= unlocks.towers) {
+      const depleted = s.towersAvailable <= 0;
+      this.toolButtons.tower.classList.toggle('locked', depleted);
+      this.toolButtons.tower.title = depleted
+        ? 'All towers placed'
+        : 'Watch tower — place it to detect fires early';
+    }
+    if (s.seasonYear >= unlocks.crew) {
+      const gone = s.crews.length === 0;
+      this.toolButtons.crew.classList.toggle('locked', gone);
+      this.toolButtons.crew.title = gone
+        ? 'The crew is gone this season'
+        : 'Fire crew — click vegetation to cut a firebreak line';
+    }
+
     this.hectares.textContent = `${s.stats.hectaresBurnt} ha burnt`;
     if (!this.animals.hidden) this.animals.textContent = `~${s.stats.animalsKilled} animals`;
     if (!this.houses.hidden) this.houses.textContent = `${s.stats.housesLost} homes lost`;
@@ -282,9 +306,17 @@ export class Hud {
   }
 
   handle(events: GameEvent[]): void {
+    // A village collapsing in one tick must not flood the stack: one line, summed.
+    const deaths = events.reduce((n, e) => (e.type === 'civilianDeaths' ? n + e.count : n), 0);
+    if (deaths > 0)
+      this.pushAlert(
+        deaths === 1 ? '1 resident did not escape.' : `${deaths} residents did not escape.`,
+      );
     for (const ev of events) {
       switch (ev.type) {
         case 'fireDetected':
+          // A new fire cancels any standing wind-down notice — it is no longer true.
+          this.dropAlerts((kind) => kind === 'winddown');
           this.pushAlert(
             `Fire reported — grid ${String.fromCharCode(65 + Math.floor((ev.x - this.state.bounds.x0) / 6))}${Math.floor((ev.y - this.state.bounds.y0) / 4) + 1}`,
           );
@@ -311,18 +343,18 @@ export class Hud {
           this.pushAlert('Watch tower raised.');
           break;
         case 'civilianDeaths':
-          this.pushAlert(
-            ev.count === 1 ? '1 resident did not escape.' : `${ev.count} residents did not escape.`,
-          );
-          break;
+          break; // coalesced above
         case 'crewDanger':
           this.pushAlert(
             ev.unit === 'engine'
               ? `Engine ${ev.unitId} requesting pull-out — get them clear!`
               : 'Fire crew requesting pull-out — get them clear!',
+            `danger-${ev.unit}-${ev.unitId}`,
           );
           break;
         case 'unitLost':
+          // The pull-out call is over; the MAYDAY replaces it.
+          this.dropAlerts((kind) => kind === `danger-${ev.unit}-${ev.unitId}`);
           this.pushAlert(
             ev.unit === 'engine'
               ? `MAYDAY — Engine ${ev.unitId} overrun. ${ev.firefighters} firefighters lost.`
@@ -341,10 +373,11 @@ export class Hud {
           );
           break;
         case 'seasonWindingDown':
-          this.pushAlert('All fires are out — the season winds down.');
+          this.pushAlert('All fires are out — the season winds down.', 'winddown');
           break;
         case 'seasonEnded':
-          break; // campaign flow (main.ts) owns the debrief
+          this.dropAlerts(() => true); // the debrief takes over
+          break;
       }
     }
   }
@@ -459,12 +492,42 @@ export class Hud {
       this.dCost.textContent = `It cost ${campaign.firefightersLost} firefighters. They held lines that could not all be held.`;
   }
 
-  private pushAlert(text: string): void {
+  /** Client-side feedback (invalid order, nothing available) — same channel as sim alerts. */
+  notify(text: string): void {
+    this.pushAlert(text);
+  }
+
+  private pushAlert(text: string, kind = 'info'): void {
     const div = document.createElement('div');
     div.className = 'alert';
     div.textContent = text;
     this.alerts.prepend(div);
-    while (this.alerts.children.length > 4) this.alerts.lastChild?.remove();
-    setTimeout(() => div.remove(), 12000);
+    this.liveAlerts.unshift({ div, ms: 8000, kind });
+    while (this.liveAlerts.length > 4) this.liveAlerts.pop()?.div.remove();
+  }
+
+  /** Age alerts on game time only — paused reading costs nothing — with a soft fade-out. */
+  private ageAlerts(dtMs: number): void {
+    for (const a of this.liveAlerts) {
+      a.ms -= dtMs;
+      if (a.ms <= 500) a.div.classList.add('fadeout');
+    }
+    this.liveAlerts = this.liveAlerts.filter((a) => {
+      if (a.ms <= 0) {
+        a.div.remove();
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private dropAlerts(match: (kind: string) => boolean): void {
+    this.liveAlerts = this.liveAlerts.filter((a) => {
+      if (match(a.kind)) {
+        a.div.remove();
+        return false;
+      }
+      return true;
+    });
   }
 }

@@ -172,7 +172,7 @@ Cost: up to 2,400 cells (only the active sector is stepped) × ≤ 8 neighbour c
 2. 1–2 rivers as edge-to-edge polylines; 0–1 lake.
 3. **Villages: 2–4 clusters of 6–20 house tiles** in grass/sparse clearings with a 1–2 tile buffer from dense forest. Each house tile: **4–10 occupants** → valley population ~250–600. Development follows a **boom-and-retreat curve** (`balance.ts: development`): housing stock grows roughly linearly to **×1.5 of the 2026 baseline by 2060** — new homes ring outward from each village, pushing into the wildland-urban interface — then managed retreat halves the peak to **×0.75 by 2070**, farthest homes abandoned first. Abandonment is not a fire loss: lots revert to grass, no counter moves — people leave before the fire chooses.
 4. Roads: minimum-spanning tree connecting villages + fire station + two map-edge exits; A* along low-density cells.
-5. **Fire station** (truck spawn/refill) on a road, roughly central.
+5. **No fire station.** Engines stage at the central crossroads and refill beside water; water bombers operate from an off-map airbase, entering over the nearest map border.
 6. Validation pass: every village road-reachable; every region truck-reachable; a water source within 12 tiles of each village; at least one pre-authored firebreak line.
 
 ### 3.4 Scars and regrowth (applied across the gap between seasons)
@@ -189,7 +189,7 @@ Burnt vegetation regrows on a real-years clock, advanced by the 4–5 years that
 - **Cooldowns** pace the real-time layer (bomber sorties, evac orders). Action points rejected (turn-based artifact); cooldowns-only rejected (no strategic layer, no season-over-season consequence).
 - **Budget:** `budget(s) = 80 + 12·t + 0.25 × unspent(s−1) + perfBonus(s−1)`, where `t = seasonIndex` (0–9) and `perfBonus = round(score/50)` (0–20, from the internal score §6.2). Clamped to a floor `minViable(s) = 90 + 6·t` that always affords the minimum effective loadout — the campaign is never mathematically lost.
 - Purchases persist across seasons (trucks survive unless destroyed; towers are permanent) — losing a truck hurts half a decade later too.
-- **Unlock-season grants are free** ("reassigned to your sector"): 2 trucks (2026), the evacuation capability (2030), water bomber #1 (2035), towers ×2 (2040), fire crew #1 (2050), water bomber #2 (2055). Until the budget system ships (post-1.0), every grant arrives free; budget will buy extras, repairs, replacements, and additional placements.
+- **Unlock-season grants are free** ("reassigned to your sector"): 2 trucks (2026), water bomber #1 (2030), the evacuation capability (2035 — after homes join the counter), towers ×2 (2040), fire crew #1 (2050), water bomber #2 (2055). Until the budget system ships (post-1.0), every grant arrives free; budget will buy extras, repairs, replacements, and additional placements.
 
 ### 4.2 Fire truck (2026)
 
@@ -198,7 +198,7 @@ Burnt vegetation regrows on a real-years clock, advanced by the 4–5 years that
 | Cost | 40 (mid-season emergency 50); 2 granted free in 2026 |
 | Move | road 5.5 tiles/tick · grass/sparse 2.2 · dense 1.1 · never water |
 | Extinguish | 1 adjacent burning cell (range 1, own tile first if standing in fire); **−4 intensity/tick** (net −3); at intensity 0 → WET (wetTimer 40 — fought ground holds) |
-| Water | capacity **30**; 1 unit per extinguish-tick; refill **6/tick** adjacent to water or station |
+| Water | capacity **30**; 1 unit per extinguish-tick; refill **6/tick** adjacent to water (there is no station) |
 | Pre-wet | 2 water → adjacent unburnt cell WET (wetTimer 30) — defensive lines |
 | Crew | 4 firefighters (danger rule below) |
 
@@ -227,15 +227,15 @@ So: undetected fast fire onto a sleeping village ≈ 35 % — a full half-minute
 
 **Preparedness (hidden scalar, 0.6–1.0, starts 1.0):** a village evacuated but never threatened (no fire within 10 tiles all season) → −0.1 ("evacuation fatigue"; future evacuations run slower). Recovers +0.05 per season played. This replaces any score penalty for over-evacuating — the cost of crying wolf is operational, not moral bookkeeping.
 
-### 4.4 Water bomber (2035; UI never says "Canadair" — trademark)
+### 4.4 Water bomber (2030; UI never says "Canadair" — trademark)
 
 | Stat | v0 |
 |---|---|
 | Fleet | #1 free in 2035; #2 free in 2055 (purchase at 150 once the budget system ships) |
 | Sortie | two clicks: anchor cell, then aim cell — the line runs from the anchor toward the aim; a live preview shows the exact cells |
-| Flight | 1.8 tiles/tick from the station; the plane lays the line cell by cell as it flies the run — the fire keeps moving; lead your target |
+| Flight | 3.2 tiles/tick, entering over the nearest map border (the airbase is beyond the valley); the plane lays the line cell by cell as it flies the run |
 | Drop | **1 × 6 tile retardant line**: burning → −12 intensity (extinguished) · line cells WET 90 · orthogonal splash WET 45 |
-| Cooldown | reload 25 ticks at the station after the return leg |
+| Cooldown | exits over the border, then 25 ticks of off-map rearming |
 
 The big red button: dramatic, powerful, never sufficient alone — one line every ~12 s against a multi-front fire.
 

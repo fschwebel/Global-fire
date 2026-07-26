@@ -78,6 +78,8 @@ export class Renderer {
   private terrainVersion = -1;
   /** Retardant-line aiming preview (world cells), set by the input layer. */
   private dropPreview: { x: number; y: number }[] | null = null;
+  /** Orders clicked but not yet consumed by a sim tick. */
+  private pendingOrders: { x: number; y: number }[] | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -106,6 +108,13 @@ export class Renderer {
     this.seenBurning.clear();
     this.seenBurnt.clear();
     this.dropPreview = null;
+    this.pendingOrders = null;
+    this.rainAlpha = 0; // last season's shower must not open the new one
+  }
+
+  /** Click positions whose orders await the next sim tick — quick feedback, especially while paused. */
+  setPendingOrders(cells: { x: number; y: number }[] | null): void {
+    this.pendingOrders = cells;
   }
 
   /** Cells the armed retardant line would cover; null clears the preview. */
@@ -173,13 +182,6 @@ export class Renderer {
           tctx.fillRect(px, py, TILE, TILE);
         }
       }
-    // Station marker.
-    const sx = (s.station.x - b.x0) * TILE;
-    const sy = (s.station.y - b.y0) * TILE;
-    tctx.fillStyle = '#c62828';
-    tctx.fillRect(sx + 4, sy + 4, TILE - 8, TILE - 8);
-    tctx.fillStyle = '#fff';
-    tctx.fillRect(sx + 8, sy + 6, 4, TILE - 12);
     this.terrainDirty = false;
   }
 
@@ -346,6 +348,17 @@ export class Renderer {
       ctx.fillRect(px + 8, py + 8, TILE - 16, TILE - 16);
     }
 
+    // Orders awaiting their sim tick: a small ring so a paused click never looks dead.
+    if (this.pendingOrders) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.lineWidth = 2;
+      for (const p of this.pendingOrders) {
+        ctx.beginPath();
+        ctx.arc((p.x + 0.5) * TILE - ox, (p.y + 0.5) * TILE - oy, 7, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
     // Retardant-line aiming preview: the exact cells the bomber would lay.
     if (this.dropPreview) {
       ctx.strokeStyle = 'rgba(100, 170, 245, 0.9)';
@@ -359,7 +372,7 @@ export class Renderer {
       }
     }
 
-    // Water bombers: airborne between station and target; water sheet on the run.
+    // Water bombers: airborne between the border and the line; water sheet on the run.
     for (const b of s.bombers) {
       if (b.state === 'ready' || b.state === 'reloading') continue; // at the airbase
       const fx = (b.px + (b.x - b.px) * alpha + 0.5) * TILE - ox;
@@ -373,9 +386,7 @@ export class Renderer {
       const to =
         b.state === 'dropping' && b.line.length > 0
           ? b.line[b.line.length - 1]!
-          : b.state === 'returning'
-            ? s.station
-            : (b.target ?? s.station);
+          : (b.target ?? { x: b.x + 1, y: b.y });
       const ang = Math.atan2(to.y - b.y, to.x - b.x);
       ctx.save();
       ctx.translate(fx, fy);

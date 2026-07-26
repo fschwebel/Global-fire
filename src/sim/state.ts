@@ -180,7 +180,8 @@ export interface GameState {
   rainTicks: number;
   /** Consecutive quiet ticks (no fire, schedule done) — the season winds down when it accumulates. */
   quietTicks: number;
-  station: Point;
+  /** The central crossroads: engines stage here and sectors center on it. */
+  center: Point;
   trucks: Truck[];
   villages: Village[];
   bombers: Bomber[];

@@ -111,6 +111,9 @@ const viewport = new MapViewport(
 const loop = new GameLoop(
   state,
   (events) => {
+    // The tick ran: whatever was queued has been consumed.
+    pendingOrders = [];
+    renderer.setPendingOrders(null);
     hud.handle(events);
     for (const ev of events)
       if (ev.type === 'unitLost' && ev.unit === 'engine' && ev.unitId === pinnedTruckId)
@@ -120,7 +123,7 @@ const loop = new GameLoop(
   },
   (alpha) => {
     renderer.draw(pinnedTruckId, alpha, loop.speed > 0);
-    hud.update(pinnedTruckId);
+    hud.update(pinnedTruckId, loop.speed > 0);
   },
 );
 
@@ -133,6 +136,7 @@ function startSeason(idx: number, carryGrid?: Cell[], carryTowers?: typeof state
   state = createSeason(CAMPAIGN_SEED, idx, carryGrid, carryTowers);
   pinnedTruckId = null;
   clearBomberAnchor();
+  pendingOrders = [];
   renderer.setState(state);
   hud.setState(state);
   loop.setState(state);
@@ -143,6 +147,7 @@ function startSeason(idx: number, carryGrid?: Cell[], carryTowers?: typeof state
 }
 
 function onSeasonEnd(report: Stats): void {
+  setSpeed(0); // nothing should animate or burn CPU behind the debrief
   campaign = addStats(campaign, report);
   debriefIsFinal = seasonIndex >= LAST_SEASON;
   // The final save is cleared only when the player leaves the final screen —
@@ -168,6 +173,15 @@ let overlayClosedAt = 0;
 
 function overlayJustClosed(): boolean {
   return performance.now() - overlayClosedAt < 350;
+}
+
+/** Orders clicked but not yet consumed by a sim tick — drawn as rings so a paused click never looks dead. */
+let pendingOrders: { x: number; y: number }[] = [];
+
+function enqueueOrder(cmd: Parameters<typeof loop.enqueue>[0], x: number, y: number): void {
+  loop.enqueue(cmd);
+  pendingOrders.push({ x, y });
+  renderer.setPendingOrders(pendingOrders);
 }
 
 /** First click of a retardant-line order; the second click sets the direction. */
@@ -213,7 +227,7 @@ mapwrap.addEventListener('click', (ev) => {
         togglePin(truck.id);
         return;
       }
-      loop.enqueue({ type: 'dispatch', x, y, truckId: pinnedTruckId ?? undefined });
+      enqueueOrder({ type: 'dispatch', x, y, truckId: pinnedTruckId ?? undefined }, x, y);
       break;
     }
     case 'evac': {
@@ -224,28 +238,52 @@ mapwrap.addEventListener('click', (ev) => {
         if (d <= 6 && (best === null || d < best.d)) best = { id: v.id, d };
       }
       if (best) {
-        loop.enqueue({ type: 'evacuate', villageId: best.id });
+        enqueueOrder({ type: 'evacuate', villageId: best.id }, x, y);
         setTool('engine');
       }
       break;
     }
     case 'bomber':
+      // Nothing ready must not swallow a two-click order in silence.
+      if (!state.bombers.some((b) => b.state === 'ready')) {
+        hud.notify('No bomber ready — rearming beyond the valley.');
+        break;
+      }
       // Two-click order: anchor the line, then aim it.
       if (!bomberAnchor) {
         bomberAnchor = { x, y };
         hud.setBomberAnchor(true);
         renderer.setDropPreview([{ x, y }]);
       } else if (x !== bomberAnchor.x || y !== bomberAnchor.y) {
-        loop.enqueue({ type: 'bomberDrop', x: bomberAnchor.x, y: bomberAnchor.y, x2: x, y2: y });
+        enqueueOrder(
+          { type: 'bomberDrop', x: bomberAnchor.x, y: bomberAnchor.y, x2: x, y2: y },
+          bomberAnchor.x,
+          bomberAnchor.y,
+        );
         clearBomberAnchor();
       }
       break;
-    case 'tower':
-      loop.enqueue({ type: 'placeTower', x, y });
+    case 'tower': {
+      if (state.towersAvailable <= 0) {
+        hud.notify('No towers left to place.');
+        setTool('engine');
+        break;
+      }
+      const cell = state.grid[y * state.w + x];
+      if (!cell || cell.type === 'water' || cell.state === 'burning') {
+        hud.notify("That ground won't take a tower.");
+        break;
+      }
+      enqueueOrder({ type: 'placeTower', x, y }, x, y);
       if (state.towersAvailable <= 1) setTool('engine');
       break;
+    }
     case 'crew':
-      loop.enqueue({ type: 'crewCut', x, y });
+      if (state.crews.length === 0) {
+        hud.notify('The crew is gone this season.');
+        break;
+      }
+      enqueueOrder({ type: 'crewCut', x, y }, x, y);
       break;
   }
 });
@@ -260,6 +298,10 @@ mapwrap.addEventListener('pointermove', (ev) => {
     return;
   }
   renderer.setDropPreview(dropLineCells(bomberAnchor, cell, bomberBal.lineLength));
+});
+
+mapwrap.addEventListener('pointerleave', () => {
+  if (armedTool === 'bomber' && bomberAnchor) renderer.setDropPreview([bomberAnchor]);
 });
 
 mapwrap.addEventListener('contextmenu', (ev) => {

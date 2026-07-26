@@ -230,6 +230,11 @@ body {
   animation: fadein 0.3s;
 }
 
+.alert.fadeout {
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
 @keyframes fadein {
   from {
     opacity: 0;

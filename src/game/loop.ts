@@ -3,7 +3,7 @@ import type { Command, GameEvent, GameState } from '../sim/state';
 import { step } from '../sim/step';
 
 /**
- * Fixed-timestep accumulator loop: sim at 2 Hz, render at display rate.
+ * Fixed-timestep accumulator loop: sim at 1.25 Hz, render at display rate.
  * Each frame receives alpha ∈ [0,1] — progress through the current tick —
  * so the renderer can interpolate sprite motion between sim states.
  */
@@ -37,7 +37,7 @@ export class GameLoop {
       let guard = 0;
       while (this.acc >= TICK_MS && guard++ < 8) {
         const events = step(this.state, this.queue.splice(0));
-        if (events.length > 0) this.onEvents(events);
+        this.onEvents(events); // always: the UI also reacts to the tick itself
         this.acc -= TICK_MS;
       }
       if (this.acc > TICK_MS * 8) this.acc = 0;

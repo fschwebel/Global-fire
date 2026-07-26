@@ -112,7 +112,7 @@ function nearRoadHouseOrTruck(s: GameState, x: number, y: number): boolean {
 }
 
 /**
- * Advance the simulation by one tick (2 Hz). Deterministic: same seed + same
+ * Advance the simulation by one tick (1.25 Hz). Deterministic: same seed + same
  * command history ⇒ identical state. Mutates `s` and returns the tick's events.
  */
 export function step(s: GameState, commands: Command[] = []): GameEvent[] {

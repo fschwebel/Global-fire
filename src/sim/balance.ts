@@ -91,8 +91,9 @@ export const rain = {
 
 /** Season year each means arrives — free, "reassigned to your sector" (progression doc §3). */
 export const unlocks = {
-  evacuate: 2030,
-  bomber: 2035,
+  bomber: 2030,
+  /** After homes join the counter (2035) — you evacuate what you can see losing. */
+  evacuate: 2035,
   towers: 2040,
   crew: 2050,
   bomber2: 2055,
@@ -107,8 +108,8 @@ export const evac = {
 };
 
 export const bomber = {
-  /** Tiles per tick, straight-line flight over any terrain. */
-  flySpeed: 1.8,
+  /** Tiles per tick — fast: bombers fly in from an off-map airbase over the nearest border. */
+  flySpeed: 3.2,
   /** Cells in the retardant line, laid from the anchor cell toward the aim cell. */
   lineLength: 6,
   intensityDrop: 12,
@@ -185,7 +186,7 @@ export const map = {
   W: 60,
   H: 40,
   villageCount: 4,
-  /** First village stays close to the station so the smallest sector has stakes. */
+  /** First village stays close to the central crossroads so the smallest sector has stakes. */
   firstVillageMaxDist: 11,
   villageMinHouses: 6,
   villageMaxHouses: 12,
@@ -193,7 +194,7 @@ export const map = {
   occupantsMax: 10,
 };
 
-/** Active sector size per season pair (grows every 2 seasons, centered on the station). */
+/** Active sector size per season pair (grows every 2 seasons, centered on the crossroads). */
 export const sectorSizes: [number, number][] = [
   [44, 30], // 2026, 2030
   [48, 32], // 2035, 2040

@@ -153,8 +153,7 @@ function adjacentBurning(s: GameState, t: Truck): { x: number; y: number } | nul
   return best;
 }
 
-function adjacentToWaterOrStation(s: GameState, t: Truck): boolean {
-  if (Math.abs(t.x - s.station.x) <= 1 && Math.abs(t.y - s.station.y) <= 1) return true;
+function adjacentToWater(s: GameState, t: Truck): boolean {
   for (let dy = -1; dy <= 1; dy++)
     for (let dx = -1; dx <= 1; dx++) {
       const nx = t.x + dx;
@@ -214,7 +213,7 @@ export function updateTrucks(s: GameState): void {
       continue;
     }
 
-    if (t.water < T.waterCapacity && adjacentToWaterOrStation(s, t)) {
+    if (t.water < T.waterCapacity && adjacentToWater(s, t)) {
       t.water = Math.min(T.waterCapacity, t.water + T.refillPerTick);
     }
   }
@@ -242,9 +241,30 @@ export function dropLineCells(from: Point, aim: Point, length: number): Point[] 
   return cells;
 }
 
+/** The nearest point on the active sector's edge — bombers fly in from off-map. */
+function nearestEdgePoint(s: GameState, p: Point): Point {
+  const candidates: Point[] = [
+    { x: p.x, y: s.bounds.y0 },
+    { x: p.x, y: s.bounds.y1 - 1 },
+    { x: s.bounds.x0, y: p.y },
+    { x: s.bounds.x1 - 1, y: p.y },
+  ];
+  let best = candidates[0]!;
+  let bestD = Number.POSITIVE_INFINITY;
+  for (const c of candidates) {
+    const d = Math.hypot(c.x - p.x, c.y - p.y);
+    if (d < bestD) {
+      bestD = d;
+      best = c;
+    }
+  }
+  return best;
+}
+
 /**
  * Send the first ready bomber to lay a retardant line anchored at (x,y),
- * running toward (x2,y2). Returns its id, or null.
+ * running toward (x2,y2). It enters over the nearest map border — the
+ * airbase is beyond the valley. Returns its id, or null.
  */
 export function dispatchBomber(
   s: GameState,
@@ -256,6 +276,11 @@ export function dispatchBomber(
   if (!inActive(s, x, y) || (x === x2 && y === y2)) return null;
   const b = s.bombers.find((bb) => bb.state === 'ready');
   if (!b) return null;
+  const entry = nearestEdgePoint(s, { x, y });
+  b.x = entry.x;
+  b.y = entry.y;
+  b.px = entry.x;
+  b.py = entry.y;
   b.state = 'outbound';
   b.line = dropLineCells({ x, y }, { x: x2, y: y2 }, B.lineLength);
   b.target = { x, y };
@@ -330,13 +355,15 @@ export function updateBombers(s: GameState, events: GameEvent[]): void {
           const start = b.line[0]!;
           events.push({ type: 'bomberDrop', x: start.x, y: start.y });
           b.line = [];
-          b.target = null;
+          b.target = nearestEdgePoint(s, { x: Math.round(b.x), y: Math.round(b.y) });
           b.state = 'returning';
         }
         break;
       }
       case 'returning':
-        if (fly(b, s.station.x, s.station.y)) {
+        // Out over the border, then rearm off-map.
+        if (!b.target || fly(b, b.target.x, b.target.y)) {
+          b.target = null;
           b.state = 'reloading';
           b.phaseTicks = B.reloadTicks;
         }

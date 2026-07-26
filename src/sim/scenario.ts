@@ -52,7 +52,7 @@ function blankCell(type: TileType): Cell {
  * Deterministic world generation from the campaign seed (gameplay doc §3.3).
  * One persistent world; each season plays a centered crop of it (sector).
  */
-export function generateMap(seed: number): { grid: Cell[]; station: Point; villages: Point[] } {
+export function generateMap(seed: number): { grid: Cell[]; center: Point; villages: Point[] } {
   const rng = mulberry32(seed ^ 0x9e3779b9);
   const grid: Cell[] = [];
 
@@ -86,7 +86,7 @@ export function generateMap(seed: number): { grid: Cell[]; station: Point; villa
 
   // 3. Trunk roads: an east–west and a north–south road cross the whole world
   //    (leaving it at four edges, as real regional roads do), meeting at the
-  //    fire station near the centre. Water crossings become bridges (paved).
+  //    meeting near the centre. Water crossings become bridges (paved).
   const pave = (x: number, y: number) => {
     const cell = grid[y * M.W + x]!;
     if (cell.type !== 'house') setBase(cell, 'road');
@@ -119,21 +119,21 @@ export function generateMap(seed: number): { grid: Cell[]; station: Point; villa
     }
   }
 
-  // 4. Fire station at the crossroads (nearest road cell to the centre).
-  let station: Point = { x: cx0, y: cy0 };
+  // 4. The central crossroads (nearest road cell to the centre).
+  let center: Point = { x: cx0, y: cy0 };
   let bestD = Number.POSITIVE_INFINITY;
   for (const p of [...ewRoad, ...nsRoad]) {
     const d = Math.abs(p.x - cx0) + Math.abs(p.y - cy0);
     if (d < bestD) {
       bestD = d;
-      station = p;
+      center = p;
     }
   }
-  setBase(grid[station.y * M.W + station.x]!, 'road');
+  setBase(grid[center.y * M.W + center.x]!, 'road');
 
   // 5. Villages grow along the roads — the road runs through the town, as on a
   //    real map. Sites sit on the trunk network, spaced apart; the first stays
-  //    close to the station so the smallest sector has stakes.
+  //    close to the crossroads so the smallest sector has stakes.
   const villages: Point[] = [];
   const roadCells = [...ewRoad, ...nsRoad].filter(
     (p) => p.x > 2 && p.x < M.W - 3 && p.y > 2 && p.y < M.H - 3,
@@ -142,9 +142,9 @@ export function generateMap(seed: number): { grid: Cell[]; station: Point; villa
   while (villages.length < M.villageCount && guard++ < 900) {
     const at = roadCells[Math.floor(rng() * roadCells.length)]!;
     const first = villages.length === 0;
-    const distStation = Math.max(Math.abs(at.x - station.x), Math.abs(at.y - station.y));
-    if (first && distStation > M.firstVillageMaxDist) continue;
-    if (distStation < 6) continue;
+    const distCenter = Math.max(Math.abs(at.x - center.x), Math.abs(at.y - center.y));
+    if (first && distCenter > M.firstVillageMaxDist) continue;
+    if (distCenter < 6) continue;
     if (villages.some((v) => Math.abs(v.x - at.x) + Math.abs(v.y - at.y) < 12)) continue;
 
     const houses =
@@ -185,13 +185,13 @@ export function generateMap(seed: number): { grid: Cell[]; station: Point; villa
     }
   }
 
-  // 6. Reachability: every piece of land must be reachable from the station
+  // 6. Reachability: every piece of land must be reachable from the crossroads
   //    (trucks cross water only on bridges). Carve road spurs — bridging the
   //    river where needed — until no meaningful land pocket is cut off.
   const passable = (t: TileType) => t !== 'water';
   for (let round = 0; round < 6; round++) {
     const reached = new Uint8Array(M.W * M.H);
-    const queue = [station.y * M.W + station.x];
+    const queue = [center.y * M.W + center.x];
     reached[queue[0]!] = 1;
     while (queue.length > 0) {
       const cur = queue.pop()!;
@@ -251,7 +251,7 @@ export function generateMap(seed: number): { grid: Cell[]; station: Point; villa
     }
     if (!pocket || pocketSize < 6) break;
     // Bridge from the nearest reached road cell to the pocket with an L-path.
-    let from: Point = station;
+    let from: Point = center;
     let fromD = Number.POSITIVE_INFINITY;
     for (let i = 0; i < M.W * M.H; i++) {
       if (!reached[i] || grid[i]!.type !== 'road') continue;
@@ -284,7 +284,7 @@ export function generateMap(seed: number): { grid: Cell[]; station: Point; villa
       setBase(cell, 'firebreak');
   }
 
-  return { grid, station, villages };
+  return { grid, center, villages };
 }
 
 function setBase(cell: Cell, type: TileType): void {
@@ -292,12 +292,12 @@ function setBase(cell: Cell, type: TileType): void {
   cell.baseType = type;
 }
 
-/** The active sector for a season: sized per pair, centered on the station, clamped to the world. */
-export function boundsForSeason(seasonIndex: number, station: Point): Bounds {
+/** The active sector for a season: sized per pair, centered on the crossroads, clamped to the world. */
+export function boundsForSeason(seasonIndex: number, center: Point): Bounds {
   const pair = Math.min(Math.floor(seasonIndex / 2), sectorSizes.length - 1);
   const [bw, bh] = sectorSizes[pair]!;
-  const x0 = Math.min(Math.max(0, Math.round(station.x - bw / 2)), M.W - bw);
-  const y0 = Math.min(Math.max(0, Math.round(station.y - bh / 2)), M.H - bh);
+  const x0 = Math.min(Math.max(0, Math.round(center.x - bw / 2)), M.W - bw);
+  const y0 = Math.min(Math.max(0, Math.round(center.y - bh / 2)), M.H - bh);
   return { x0, y0, x1: x0 + bw, y1: y0 + bh };
 }
 
@@ -410,9 +410,9 @@ function applyDevelopment(grid: Cell[], fresh: Cell[], villages: Point[], year: 
  * An rng roll is drawn for every ring cell so a reloaded campaign stamps
  * exactly the same cells as a played-through one.
  */
-function blendSectorSeam(grid: Cell[], seed: number, seasonIndex: number, station: Point): void {
-  const oldB = boundsForSeason(seasonIndex - 1, station);
-  const newB = boundsForSeason(seasonIndex, station);
+function blendSectorSeam(grid: Cell[], seed: number, seasonIndex: number, center: Point): void {
+  const oldB = boundsForSeason(seasonIndex - 1, center);
+  const newB = boundsForSeason(seasonIndex, center);
   if (oldB.x0 === newB.x0 && oldB.y0 === newB.y0 && oldB.x1 === newB.x1 && oldB.y1 === newB.y1)
     return;
   const rng = mulberry32(seed ^ (0x5eaa + seasonIndex * 131));
@@ -480,7 +480,7 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
       compSize.push(size);
     }
 
-  // Ignition sites: fuel tiles near a road, away from villages and the station,
+  // Ignition sites: fuel tiles near a road, away from villages and the crossroads,
   // in continuous fuel connected to a real fuel mass — all within the sector.
   const candidates: Point[] = [];
   for (let y = b.y0 + 1; y < b.y1 - 1; y++)
@@ -489,8 +489,8 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
       if (c.type !== 'grass' && c.type !== 'sparse') continue;
       const farFromVillages = villages.every((v) => Math.abs(v.x - x) + Math.abs(v.y - y) >= 8);
       if (!farFromVillages) continue;
-      // Not on the station's doorstep — the parked engines would kill it in one tick.
-      if (Math.abs(s.station.x - x) + Math.abs(s.station.y - y) < 10) continue;
+      // Not on the staging crossroads' doorstep — the parked engines would kill it in one tick.
+      if (Math.abs(s.center.x - x) + Math.abs(s.center.y - y) < 10) continue;
       let fuelAround = 0;
       for (let dy = -2; dy <= 2; dy++)
         for (let dx = -2; dx <= 2; dx++) {
@@ -565,7 +565,7 @@ export function createSeason(
 ): GameState {
   const params = seasons[seasonIndex];
   if (!params) throw new Error(`no season ${seasonIndex}`);
-  const { grid: freshGrid, station, villages } = generateMap(seed);
+  const { grid: freshGrid, center, villages } = generateMap(seed);
   const rng = mulberry32(seed ^ (0xf17e + seasonIndex * 101));
 
   let grid = freshGrid;
@@ -584,7 +584,7 @@ export function createSeason(
       detected: false,
     }));
   }
-  if (carryGrid && seasonIndex > 0) blendSectorSeam(grid, seed, seasonIndex, station);
+  if (carryGrid && seasonIndex > 0) blendSectorSeam(grid, seed, seasonIndex, center);
   for (const cell of grid) applyRegrowth(cell, params.year);
   applyDevelopment(grid, freshGrid, villages, params.year);
 
@@ -596,7 +596,7 @@ export function createSeason(
     w: M.W,
     h: M.H,
     grid,
-    bounds: boundsForSeason(seasonIndex, station),
+    bounds: boundsForSeason(seasonIndex, center),
     wind: { dir: rng() * Math.PI * 2, str: params.windStr },
     dryness: params.dryness,
     spreadMult: params.spreadMult ?? 1,
@@ -605,16 +605,16 @@ export function createSeason(
     randomIgnitionRate: params.randomIgnitionRate,
     rainTicks: 0,
     quietTicks: 0,
-    station,
+    center,
     trucks: [1, 2].map((id) => ({
       id,
-      x: station.x,
-      y: station.y,
+      x: center.x,
+      y: center.y,
       water: T.waterCapacity,
       path: [],
       movePoints: 0,
       target: null,
-      trail: [{ x: station.x, y: station.y }],
+      trail: [{ x: center.x, y: center.y }],
       dangerTicks: 0,
     })),
     villages: villages.map((v, i) => ({
@@ -631,10 +631,10 @@ export function createSeason(
         : []
     ).map((id) => ({
       id,
-      x: station.x,
-      y: station.y,
-      px: station.x,
-      py: station.y,
+      x: center.x,
+      y: center.y,
+      px: center.x,
+      py: center.y,
       state: 'ready' as const,
       target: null,
       line: [],
@@ -646,13 +646,13 @@ export function createSeason(
         ? [
             {
               id: 1,
-              x: station.x,
-              y: station.y,
+              x: center.x,
+              y: center.y,
               path: [],
               movePoints: 0,
               jobs: [],
               cutProgress: 0,
-              trail: [{ x: station.x, y: station.y }],
+              trail: [{ x: center.x, y: center.y }],
               dangerTicks: 0,
             },
           ]
