@@ -1306,3 +1306,37 @@ describe('evacuation pacing', () => {
     ).toBe(true);
   });
 });
+
+describe('scripted ignition relocation', () => {
+  it('a fire whose site burnt over relocates to nearby fuel instead of fizzling', () => {
+    const s = createSeason(42, 0);
+    const first = s.script.ignitions[0]!;
+    // Pre-burn the site and its surroundings, and make it the only fire due:
+    // pull it before everything else and push the rest far out.
+    for (let dy = -2; dy <= 2; dy++)
+      for (let dx = -2; dx <= 2; dx++) {
+        const c = s.grid[(first.y + dy) * s.w + (first.x + dx)];
+        if (c && c.state === 'unburnt') {
+          c.state = 'burnt';
+          c.burntYear = s.seasonYear;
+        }
+      }
+    first.tick = 2;
+    for (const ig of s.script.ignitions.slice(1)) ig.tick = 500;
+
+    for (let i = 0; i < 4; i++) step(s);
+    expect(first.done).toBe(true);
+    // The only possible fire is the relocated one — and it burns, near the site.
+    let burningNear = 0;
+    let burningAnywhere = 0;
+    for (let y = 0; y < s.h; y++)
+      for (let x = 0; x < s.w; x++) {
+        if (s.grid[y * s.w + x]!.state !== 'burning') continue;
+        burningAnywhere++;
+        if (Math.max(Math.abs(x - first.x), Math.abs(y - first.y)) <= 8) burningNear++;
+      }
+    expect(burningNear).toBeGreaterThan(0);
+    expect(burningAnywhere).toBe(burningNear); // nothing else is due yet
+    expect(s.grid[first.y * s.w + first.x]!.state).toBe('burnt'); // the site stayed ash
+  });
+});

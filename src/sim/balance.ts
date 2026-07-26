@@ -57,6 +57,8 @@ export const ignitionSchedule = {
   quietGap: 6,
   /** Quiet ticks (schedule done, nothing burning) before the season winds down and ends. */
   windDownTicks: 15,
+  /** A scripted fire whose site burnt over relocates to the nearest fuel within this radius. */
+  relocateRadius: 8,
 };
 
 export const detection = {

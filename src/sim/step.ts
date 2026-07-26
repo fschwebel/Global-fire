@@ -12,7 +12,7 @@ import {
   windDriftPerTick,
 } from './balance';
 import { flammable, ignite, intensityCap, spreadProb } from './fire';
-import type { Command, GameEvent, GameState, Village } from './state';
+import type { Command, GameEvent, GameState, Point, Village } from './state';
 import { cellAt, idx, inActive } from './state';
 import {
   applyDangerRule,
@@ -71,6 +71,23 @@ function applyCommands(s: GameState, commands: Command[], events: GameEvent[]): 
       }
     }
   }
+}
+
+/**
+ * Nearest still-flammable cell to (x,y) within the relocation radius, in a
+ * fixed ring-scan order (deterministic). Null when everything around is ash.
+ */
+function nearestFlammable(s: GameState, x: number, y: number): Point | null {
+  for (let ring = 1; ring <= ignitionSchedule.relocateRadius; ring++)
+    for (let dy = -ring; dy <= ring; dy++)
+      for (let dx = -ring; dx <= ring; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (!inActive(s, nx, ny)) continue;
+        if (flammable(s.grid[idx(s, nx, ny)]!)) return { x: nx, y: ny };
+      }
+  return null;
 }
 
 /** The village a house tile belongs to (development builds up to maxRing out). */
@@ -169,7 +186,16 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
     for (const ig of s.script.ignitions) {
       if (!ig.done && s.tick >= ig.tick) {
         const c = cellAt(s, ig.x, ig.y);
-        if (flammable(c)) ignite(s, c, false);
+        if (flammable(c)) {
+          ignite(s, c, false);
+        } else if (c.state !== 'burning') {
+          // The site burnt over before its fire came. The season's fire count
+          // is authored drama — relocate to the nearest stand still worth
+          // burning rather than fizzling into an early wind-down.
+          const alt = nearestFlammable(s, ig.x, ig.y);
+          if (alt) ignite(s, cellAt(s, alt.x, alt.y), false);
+        }
+        // A site currently burning counts as satisfied — no duplicate fire.
         ig.done = true;
       }
     }

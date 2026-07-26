@@ -108,7 +108,7 @@ Spotting is why firebreaks and rivers stop being absolute safety in later season
 
 ### 2.6 Ignition sources
 
-Per season: an authored script (staggered ~90 ticks apart in the tutorial, compressing as seasons harden; a quiet valley pulls the next ignition forward) plus a background rate (`P_RANDOM_IGNITION` per tick anywhere flammable in the sector). 2026: 3 scripted, no random. 2070: 6 scripted + 0.004/tick. Early seasons also carry a `spreadMult` brake (0.72 / 0.85 / 0.95 for 2026 / 2030 / 2035).
+Per season: an authored script (staggered ~90 ticks apart in the tutorial, compressing as seasons harden; a quiet valley pulls the next ignition forward; a site that burnt over before its turn relocates to the nearest remaining fuel within 8 tiles, so the authored fire count survives a roaming earlier fire) plus a background rate (`P_RANDOM_IGNITION` per tick anywhere flammable in the sector). 2026: 3 scripted, no random. 2070: 6 scripted + 0.004/tick. Early seasons also carry a `spreadMult` brake (0.72 / 0.85 / 0.95 for 2026 / 2030 / 2035).
 
 ### 2.7 Detection
 
