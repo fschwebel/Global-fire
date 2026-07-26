@@ -1,6 +1,8 @@
 import { Renderer, TILE } from '../render/canvas';
+import { bomber as bomberBal } from '../sim/balance';
 import { createSeason } from '../sim/scenario';
 import type { Cell, GameState, Stats } from '../sim/state';
+import { dropLineCells } from '../sim/units';
 import { Hud, type Tool } from '../ui/hud';
 import { MapViewport } from '../ui/viewport';
 import { GameLoop } from './loop';
@@ -84,6 +86,7 @@ let pinnedTruckId: number | null = null;
 let armedTool: Tool = 'engine';
 
 function setTool(tool: Tool): void {
+  if (armedTool === 'bomber' && tool !== 'bomber') clearBomberAnchor();
   armedTool = tool;
   if (tool !== 'engine') pinnedTruckId = null;
   hud.setTool(tool);
@@ -125,6 +128,7 @@ function startSeason(idx: number, carryGrid?: Cell[], carryTowers?: typeof state
   seasonIndex = idx;
   state = createSeason(CAMPAIGN_SEED, idx, carryGrid, carryTowers);
   pinnedTruckId = null;
+  clearBomberAnchor();
   renderer.setState(state);
   hud.setState(state);
   loop.setState(state);
@@ -153,19 +157,36 @@ function overlayJustClosed(): boolean {
   return performance.now() - overlayClosedAt < 350;
 }
 
-// Click orders listen on the container: the viewport's pointer capture makes
-// Chrome retarget clicks to #mapwrap, so a canvas listener would never fire.
-const mapwrap = document.getElementById('mapwrap') as HTMLElement;
-mapwrap.addEventListener('click', (ev) => {
-  if (viewport.consumeDragged()) return; // a pan/pinch, not an order
-  if (hud.overlayVisible() || overlayJustClosed()) return;
+/** First click of a retardant-line order; the second click sets the direction. */
+let bomberAnchor: { x: number; y: number } | null = null;
+
+function clearBomberAnchor(): void {
+  bomberAnchor = null;
+  hud.setBomberAnchor(false);
+  renderer.setDropPreview(null);
+}
+
+/** Map-cell under a pointer event, or null outside the sector. */
+function cellFromEvent(ev: { clientX: number; clientY: number }): { x: number; y: number } | null {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
   const x = state.bounds.x0 + Math.floor(((ev.clientX - rect.left) * scaleX) / TILE);
   const y = state.bounds.y0 + Math.floor(((ev.clientY - rect.top) * scaleY) / TILE);
   if (x < state.bounds.x0 || y < state.bounds.y0 || x >= state.bounds.x1 || y >= state.bounds.y1)
-    return;
+    return null;
+  return { x, y };
+}
+
+// Click orders listen on the container: the viewport's pointer capture makes
+// Chrome retarget clicks to #mapwrap, so a canvas listener would never fire.
+const mapwrap = document.getElementById('mapwrap') as HTMLElement;
+mapwrap.addEventListener('click', (ev) => {
+  if (viewport.consumeDragged()) return; // a pan/pinch, not an order
+  if (hud.overlayVisible() || overlayJustClosed()) return;
+  const cell = cellFromEvent(ev);
+  if (!cell) return;
+  const { x, y } = cell;
 
   switch (armedTool) {
     case 'engine': {
@@ -196,7 +217,15 @@ mapwrap.addEventListener('click', (ev) => {
       break;
     }
     case 'bomber':
-      loop.enqueue({ type: 'bomberDrop', x, y });
+      // Two-click order: anchor the line, then aim it.
+      if (!bomberAnchor) {
+        bomberAnchor = { x, y };
+        hud.setBomberAnchor(true);
+        renderer.setDropPreview([{ x, y }]);
+      } else if (x !== bomberAnchor.x || y !== bomberAnchor.y) {
+        loop.enqueue({ type: 'bomberDrop', x: bomberAnchor.x, y: bomberAnchor.y, x2: x, y2: y });
+        clearBomberAnchor();
+      }
       break;
     case 'tower':
       loop.enqueue({ type: 'placeTower', x, y });
@@ -206,6 +235,18 @@ mapwrap.addEventListener('click', (ev) => {
       loop.enqueue({ type: 'crewCut', x, y });
       break;
   }
+});
+
+// Aiming preview: with an anchor set, the exact line the bomber would lay
+// follows the pointer.
+mapwrap.addEventListener('pointermove', (ev) => {
+  if (armedTool !== 'bomber' || !bomberAnchor) return;
+  const cell = cellFromEvent(ev);
+  if (!cell || (cell.x === bomberAnchor.x && cell.y === bomberAnchor.y)) {
+    renderer.setDropPreview([bomberAnchor]);
+    return;
+  }
+  renderer.setDropPreview(dropLineCells(bomberAnchor, cell, bomberBal.lineLength));
 });
 
 mapwrap.addEventListener('contextmenu', (ev) => {
@@ -235,6 +276,7 @@ document.addEventListener('keydown', (ev) => {
     setSpeed(loop.speed === 0 ? 1 : 0);
   } else if (ev.key === 'Escape') {
     pinnedTruckId = null;
+    clearBomberAnchor();
     setTool('engine');
   }
 });

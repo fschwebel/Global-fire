@@ -548,6 +548,8 @@ export function createSeason(
       py: station.y,
       state: 'ready' as const,
       target: null,
+      line: [],
+      dropProgress: 0,
       phaseTicks: 0,
     })),
     crews:

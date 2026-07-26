@@ -18,7 +18,7 @@ export const briefingFacts: Record<number, string> = {
 /** "New this season" briefing line — each means arrives free, reassigned to the sector. */
 export const unlockNotes: Record<number, string> = {
   2030: 'New this season: evacuation orders. Arm 📢 and click a village — clearing it takes time, so order early.',
-  2035: 'New this season: a water bomber, reassigned to your sector. Arm 🛩 and click the map for a drop; it must return to reload.',
+  2035: 'New this season: a water bomber, reassigned to your sector. Arm 🛩, click where the retardant line starts, then a second cell to aim it; the plane must return to reload.',
   2040: 'New this season: two watch towers. Arm 🗼 and place them where nobody would call a fire in — a tower reports smoke almost instantly.',
   2050: 'New this season: a fire crew. Arm ⛏ and click vegetation tiles — the crew walks out and cuts them into a firebreak line.',
   2055: 'New this season: a second water bomber joins the sector.',

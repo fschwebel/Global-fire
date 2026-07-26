@@ -1,4 +1,4 @@
-import { bomber as B, regrowth as RG, truck as T, tower as TW } from '../sim/balance';
+import { regrowth as RG, truck as T, tower as TW } from '../sim/balance';
 import { hash2 } from '../sim/rng';
 import type { GameState, TileType } from '../sim/state';
 import { idx } from '../sim/state';
@@ -75,6 +75,8 @@ export class Renderer {
   private lastDrawAt = performance.now();
   /** Ground types seen at the last bake — crew cuts bump the sim's counter. */
   private terrainVersion = -1;
+  /** Retardant-line aiming preview (world cells), set by the input layer. */
+  private dropPreview: { x: number; y: number }[] | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -102,6 +104,12 @@ export class Renderer {
     this.resize();
     this.seenBurning.clear();
     this.seenBurnt.clear();
+    this.dropPreview = null;
+  }
+
+  /** Cells the armed retardant line would cover; null clears the preview. */
+  setDropPreview(cells: { x: number; y: number }[] | null): void {
+    this.dropPreview = cells;
   }
 
   /** Bake all static tiles once; only dynamic cells draw per frame. */
@@ -328,20 +336,36 @@ export class Renderer {
       ctx.fillRect(px + 8, py + 8, TILE - 16, TILE - 16);
     }
 
-    // Water bombers: airborne between station and target; water sheet on the drop.
+    // Retardant-line aiming preview: the exact cells the bomber would lay.
+    if (this.dropPreview) {
+      ctx.strokeStyle = 'rgba(100, 170, 245, 0.9)';
+      ctx.fillStyle = 'rgba(100, 170, 245, 0.22)';
+      ctx.lineWidth = 1.5;
+      for (const p of this.dropPreview) {
+        const px = p.x * TILE - ox;
+        const py = p.y * TILE - oy;
+        ctx.fillRect(px + 1, py + 1, TILE - 2, TILE - 2);
+        ctx.strokeRect(px + 1.5, py + 1.5, TILE - 3, TILE - 3);
+      }
+    }
+
+    // Water bombers: airborne between station and target; water sheet on the run.
     for (const b of s.bombers) {
       if (b.state === 'ready' || b.state === 'reloading') continue; // at the airbase
-      if (b.state === 'dropping' && b.target) {
-        const tx = (b.target.x + 0.5) * TILE - ox;
-        const ty = (b.target.y + 0.5) * TILE - oy;
-        ctx.fillStyle = 'rgba(80, 150, 230, 0.35)';
-        ctx.beginPath();
-        ctx.arc(tx, ty, B.dropRadius * TILE, 0, Math.PI * 2);
-        ctx.fill();
-      }
       const fx = (b.px + (b.x - b.px) * alpha + 0.5) * TILE - ox;
       const fy = (b.py + (b.y - b.py) * alpha + 0.5) * TILE - oy;
-      const to = b.state === 'returning' ? s.station : (b.target ?? s.station);
+      if (b.state === 'dropping') {
+        ctx.fillStyle = 'rgba(80, 150, 230, 0.4)';
+        ctx.beginPath();
+        ctx.arc(fx, fy, TILE * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const to =
+        b.state === 'dropping' && b.line.length > 0
+          ? b.line[b.line.length - 1]!
+          : b.state === 'returning'
+            ? s.station
+            : (b.target ?? s.station);
       const ang = Math.atan2(to.y - b.y, to.x - b.x);
       ctx.save();
       ctx.translate(fx, fy);

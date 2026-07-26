@@ -643,16 +643,39 @@ describe('unlockable means', () => {
     cell.intensity = 6;
     cell.fuel = 60;
 
-    const events = step(s, [{ type: 'bomberDrop', x: target!.x, y: target!.y }]);
+    // Anchor on the fire, aim due east: the line runs target.x .. target.x+5.
+    const events = step(s, [
+      { type: 'bomberDrop', x: target!.x, y: target!.y, x2: target!.x + 3, y2: target!.y },
+    ]);
     expect(events.some((e) => e.type === 'bomberDispatched')).toBe(true);
     let dropped = false;
     for (let i = 0; i < 60 && !dropped; i++) dropped = step(s).some((e) => e.type === 'bomberDrop');
     expect(dropped).toBe(true);
     expect(cell.state).not.toBe('burning');
     expect(cell.wetTimer).toBeGreaterThan(0);
+    // The retardant line extends toward the aim cell and holds.
+    let wetAlong = 0;
+    for (let i = 1; i < 6; i++) {
+      const cx = target!.x + i;
+      if (cx >= s.bounds.x1) break;
+      if (s.grid[target!.y * s.w + cx]!.wetTimer > 0) wetAlong++;
+    }
+    expect(wetAlong).toBeGreaterThanOrEqual(4);
 
     for (let i = 0; i < 80 && s.bombers[0]!.state !== 'ready'; i++) step(s);
     expect(s.bombers[0]!.state).toBe('ready');
+  });
+
+  it('the drop line rasterizer yields the requested cells from anchor toward aim', async () => {
+    const { dropLineCells } = await import('../src/sim/units');
+    const east = dropLineCells({ x: 10, y: 10 }, { x: 13, y: 10 }, 6);
+    expect(east).toEqual([10, 11, 12, 13, 14, 15].map((x) => ({ x, y: 10 })));
+    const diag = dropLineCells({ x: 10, y: 10 }, { x: 12, y: 12 }, 6);
+    expect(diag.length).toBe(6);
+    expect(diag[0]).toEqual({ x: 10, y: 10 });
+    expect(diag[5]!.x).toBeGreaterThan(12);
+    const degenerate = dropLineCells({ x: 5, y: 5 }, { x: 5, y: 5 }, 6);
+    expect(degenerate).toEqual([{ x: 5, y: 5 }]);
   });
 
   it('a watch tower reports fires in its radius almost instantly', () => {

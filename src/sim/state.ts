@@ -81,8 +81,13 @@ export interface Bomber {
   px: number;
   py: number;
   state: BomberState;
+  /** Flight destination: the first cell of the retardant line. */
   target: Point | null;
-  /** Ticks remaining in the current dropping/reloading phase. */
+  /** The retardant line being laid, anchor first. */
+  line: Point[];
+  /** Cells of the line already flown and dropped. */
+  dropProgress: number;
+  /** Ticks remaining in the reloading phase. */
   phaseTicks: number;
 }
 
@@ -184,7 +189,8 @@ export interface GameState {
 export type Command =
   | { type: 'dispatch'; x: number; y: number; truckId?: number }
   | { type: 'evacuate'; villageId: number }
-  | { type: 'bomberDrop'; x: number; y: number }
+  /** Lay a retardant line: anchored at (x,y), running toward (x2,y2). */
+  | { type: 'bomberDrop'; x: number; y: number; x2: number; y2: number }
   | { type: 'crewCut'; x: number; y: number; crewId?: number }
   | { type: 'placeTower'; x: number; y: number };
 

@@ -232,10 +232,10 @@ So: undetected fast fire onto a sleeping village ≈ 35 % — a full half-minute
 | Stat | v0 |
 |---|---|
 | Fleet | #1 free in 2035; #2 free in 2055 (purchase at 150 once the budget system ships) |
-| Sortie | player draws a drop line; the plane flies in visibly |
-| Flight time (call → drop) | 6 ticks — the fire keeps moving under the reticle; lead your target |
-| Drop | **1 × 5 tile line** (rotatable): intensity ≤ 5 → extinguished (WET 40) · intensity > 5 → −6 intensity · unburnt → WET 40 |
-| Cooldown | 24 ticks (lake refill; +8 if the seed's lake is small) |
+| Sortie | two clicks: anchor cell, then aim cell — the line runs from the anchor toward the aim; a live preview shows the exact cells |
+| Flight | 1.8 tiles/tick from the station; the plane lays the line cell by cell as it flies the run — the fire keeps moving; lead your target |
+| Drop | **1 × 6 tile retardant line**: burning → −12 intensity (extinguished) · line cells WET 90 · orthogonal splash WET 45 |
+| Cooldown | reload 25 ticks at the station after the return leg |
 
 The big red button: dramatic, powerful, never sufficient alone — one line every ~12 s against a multi-front fire.
 

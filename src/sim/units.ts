@@ -219,13 +219,44 @@ export function updateTrucks(s: GameState): void {
 
 // --- Water bombers -----------------------------------------------------------
 
-/** Send the first ready bomber to drop on (x,y). Returns its id, or null. */
-export function dispatchBomber(s: GameState, x: number, y: number): number | null {
-  if (!inActive(s, x, y)) return null;
+/**
+ * The cells of a retardant line: `length` distinct cells rasterized from
+ * `from` toward `aim`. Shared by the sim and the aiming preview so what the
+ * player sees is exactly what the bomber lays.
+ */
+export function dropLineCells(from: Point, aim: Point, length: number): Point[] {
+  const dx = aim.x - from.x;
+  const dy = aim.y - from.y;
+  const n = Math.hypot(dx, dy);
+  if (n === 0) return [{ x: from.x, y: from.y }];
+  const cells: Point[] = [];
+  for (let t = 0; cells.length < length && t <= length * 1.5 + 0.001; t += 0.5) {
+    const cx = Math.round(from.x + (dx / n) * t);
+    const cy = Math.round(from.y + (dy / n) * t);
+    const last = cells[cells.length - 1];
+    if (!last || last.x !== cx || last.y !== cy) cells.push({ x: cx, y: cy });
+  }
+  return cells;
+}
+
+/**
+ * Send the first ready bomber to lay a retardant line anchored at (x,y),
+ * running toward (x2,y2). Returns its id, or null.
+ */
+export function dispatchBomber(
+  s: GameState,
+  x: number,
+  y: number,
+  x2: number,
+  y2: number,
+): number | null {
+  if (!inActive(s, x, y) || (x === x2 && y === y2)) return null;
   const b = s.bombers.find((bb) => bb.state === 'ready');
   if (!b) return null;
   b.state = 'outbound';
+  b.line = dropLineCells({ x, y }, { x: x2, y: y2 }, B.lineLength);
   b.target = { x, y };
+  b.dropProgress = 0;
   return b.id;
 }
 
@@ -244,29 +275,33 @@ function fly(b: { x: number; y: number }, tx: number, ty: number): boolean {
   return false;
 }
 
-function releaseDrop(s: GameState, at: Point): void {
-  const r = Math.ceil(B.dropRadius);
-  for (let dy = -r; dy <= r; dy++)
-    for (let dx = -r; dx <= r; dx++) {
-      if (Math.hypot(dx, dy) > B.dropRadius + 0.01) continue;
-      const nx = at.x + dx;
-      const ny = at.y + dy;
-      if (!inActive(s, nx, ny)) continue;
-      const c = cellAt(s, nx, ny);
-      if (c.state === 'burning') {
-        c.intensity -= B.intensityDrop;
-        if (c.intensity <= 0) {
-          c.state = 'unburnt';
-          c.intensity = 0;
-          c.igniteAge = 0;
-          c.detected = false;
-        }
-      }
-      c.wetTimer = Math.max(c.wetTimer, B.dropWetTicks);
+/** Retardant on one line cell: kill the fire, soak the ground, splash the sides. */
+function applyRetardant(s: GameState, at: Point): void {
+  if (!inActive(s, at.x, at.y)) return;
+  const c = cellAt(s, at.x, at.y);
+  if (c.state === 'burning') {
+    c.intensity -= B.intensityDrop;
+    if (c.intensity <= 0) {
+      c.state = 'unburnt';
+      c.intensity = 0;
+      c.igniteAge = 0;
+      c.detected = false;
     }
+  }
+  c.wetTimer = Math.max(c.wetTimer, B.dropWetTicks);
+  for (const [dx, dy] of [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ] as const) {
+    if (!inActive(s, at.x + dx, at.y + dy)) continue;
+    const n = cellAt(s, at.x + dx, at.y + dy);
+    n.wetTimer = Math.max(n.wetTimer, B.splashWetTicks);
+  }
 }
 
-/** One tick of bomber behaviour: fly out, hold over the target, drop, fly home, reload. */
+/** One tick of bomber behaviour: fly out, run the line dropping as it passes, fly home, reload. */
 export function updateBombers(s: GameState, events: GameEvent[]): void {
   for (const b of s.bombers) {
     b.px = b.x;
@@ -275,18 +310,28 @@ export function updateBombers(s: GameState, events: GameEvent[]): void {
       case 'outbound':
         if (b.target && fly(b, b.target.x, b.target.y)) {
           b.state = 'dropping';
-          b.phaseTicks = B.dropTicks;
+          b.dropProgress = 0;
         }
         break;
-      case 'dropping':
-        b.phaseTicks -= 1;
-        if (b.phaseTicks <= 0 && b.target) {
-          releaseDrop(s, b.target);
-          events.push({ type: 'bomberDrop', x: b.target.x, y: b.target.y });
+      case 'dropping': {
+        const prev = b.dropProgress;
+        b.dropProgress += B.flySpeed;
+        const upto = Math.min(Math.floor(b.dropProgress), b.line.length);
+        for (let i = Math.floor(prev); i < upto; i++) applyRetardant(s, b.line[i]!);
+        const at = b.line[Math.min(upto, b.line.length) - 1] ?? b.target;
+        if (at) {
+          b.x = at.x;
+          b.y = at.y;
+        }
+        if (b.dropProgress >= b.line.length) {
+          const start = b.line[0]!;
+          events.push({ type: 'bomberDrop', x: start.x, y: start.y });
+          b.line = [];
           b.target = null;
           b.state = 'returning';
         }
         break;
+      }
       case 'returning':
         if (fly(b, s.station.x, s.station.y)) {
           b.state = 'reloading';

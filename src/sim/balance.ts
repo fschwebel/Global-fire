@@ -106,12 +106,13 @@ export const evac = {
 export const bomber = {
   /** Tiles per tick, straight-line flight over any terrain. */
   flySpeed: 1.8,
-  /** Euclidean radius of the drop footprint. */
-  dropRadius: 2,
+  /** Cells in the retardant line, laid from the anchor cell toward the aim cell. */
+  lineLength: 6,
   intensityDrop: 12,
-  dropWetTicks: 50,
-  /** Ticks spent over the target releasing the load (renders the water sheet). */
-  dropTicks: 2,
+  /** Retardant holds noticeably longer than truck water — the line is a laid barrier. */
+  dropWetTicks: 90,
+  /** Orthogonal splash beside the line: wet, but half the hold. */
+  splashWetTicks: 45,
   reloadTicks: 25,
 };
 

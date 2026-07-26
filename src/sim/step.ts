@@ -40,7 +40,7 @@ function applyCommands(s: GameState, commands: Command[], events: GameEvent[]): 
         break;
       }
       case 'bomberDrop': {
-        const id = dispatchBomber(s, cmd.x, cmd.y);
+        const id = dispatchBomber(s, cmd.x, cmd.y, cmd.x2, cmd.y2);
         if (id !== null) events.push({ type: 'bomberDispatched', bomberId: id });
         break;
       }

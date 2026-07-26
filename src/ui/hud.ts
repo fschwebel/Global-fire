@@ -78,7 +78,7 @@ const SELECTION_TEXT: Record<Tool, string> = {
   engine:
     'Click the map — the nearest engine responds. Click an engine card to take direct control.',
   evac: 'Evacuation: click a village to order it out. Clearing takes time — order early.',
-  bomber: 'Water bomber: click the map to call a drop. Esc to stand down.',
+  bomber: 'Water bomber: click where the retardant line should start.',
   tower: 'Watch tower: click the map to raise it. It reports fires around it almost instantly.',
   crew: 'Fire crew: click vegetation tiles to cut them into a firebreak line. Esc when done.',
 };
@@ -124,6 +124,7 @@ export class Hud {
   private bomberCards = new Map<number, HTMLButtonElement>();
   private crewCards = new Map<number, HTMLButtonElement>();
   private tool: Tool = 'engine';
+  private bomberAnchorSet = false;
 
   constructor(
     private state: GameState,
@@ -151,6 +152,11 @@ export class Hud {
     this.tool = tool;
     for (const [name, btn] of Object.entries(this.toolButtons) as [Tool, HTMLButtonElement][])
       btn.classList.toggle('active', name === tool);
+  }
+
+  /** The bomber order is mid-aim: the first cell is placed, the direction is next. */
+  setBomberAnchor(set: boolean): void {
+    this.bomberAnchorSet = set;
   }
 
   private applySeason(): void {
@@ -251,7 +257,9 @@ export class Hud {
     this.selection.textContent =
       this.tool === 'engine' && pinnedTruckId !== null
         ? `Controlling Engine ${pinnedTruckId} — click the map to send it. Esc to release.`
-        : SELECTION_TEXT[this.tool];
+        : this.tool === 'bomber' && this.bomberAnchorSet
+          ? 'Now click a second cell — the line runs from the anchor toward it. Esc to cancel.'
+          : SELECTION_TEXT[this.tool];
   }
 
   handle(events: GameEvent[]): void {
