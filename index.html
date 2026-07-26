@@ -54,11 +54,24 @@
       <div id="version"></div>
       <div id="briefing" hidden>
         <h2 id="b-year"></h2>
-        <p id="b-temp" hidden>
-          <span id="b-temp-avg"></span>
-          <span id="b-temp-freq"></span>
-          <span id="b-temp-max"></span>
-        </p>
+        <section id="b-climate" hidden>
+          <div id="b-climate-head">
+            The climate this season
+            <span>IPCC AR6 · middle-of-the-road pathway</span>
+          </div>
+          <div id="b-degrees">
+            <span id="b-deg-num"></span>
+            <span id="b-deg-label">global average, above pre-industrial</span>
+          </div>
+          <dl id="b-impacts">
+            <div><dt>Once-a-decade drought</dt><dd id="b-drought"></dd></div>
+            <div><dt>Once-a-decade heatwave</dt><dd id="b-heat"></dd></div>
+            <div class="peak"><dt>Hottest summer days here</dt><dd id="b-peak"></dd></div>
+          </dl>
+          <div id="b-climate-note">
+            A global average understates a fire season — land warms faster, extremes faster still.
+          </div>
+        </section>
         <p id="b-growth" hidden>
           The department has widened your sector — more forest, more people, yours to protect.
         </p>

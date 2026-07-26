@@ -97,10 +97,11 @@ export class Hud {
   private ffs = el<HTMLSpanElement>('ffs');
   private civs = el<HTMLSpanElement>('civs');
   private year = el<HTMLDivElement>('year');
-  private bTemp = el<HTMLParagraphElement>('b-temp');
-  private bTempAvg = el<HTMLSpanElement>('b-temp-avg');
-  private bTempFreq = el<HTMLSpanElement>('b-temp-freq');
-  private bTempMax = el<HTMLSpanElement>('b-temp-max');
+  private bClimate = el<HTMLElement>('b-climate');
+  private bDegNum = el<HTMLSpanElement>('b-deg-num');
+  private bDrought = el<HTMLElement>('b-drought');
+  private bHeat = el<HTMLElement>('b-heat');
+  private bPeak = el<HTMLElement>('b-peak');
   private windarrow = el<HTMLSpanElement>('windarrow');
   private windspeed = el<HTMLSpanElement>('windspeed');
   private dryness = el<HTMLSpanElement>('dryness');
@@ -367,15 +368,14 @@ export class Hud {
     const s = this.state;
     this.bYear.textContent = String(s.seasonYear);
     const avg = warming[s.seasonYear];
-    this.bTemp.hidden = avg === undefined;
+    this.bClimate.hidden = avg === undefined;
     if (avg !== undefined) {
-      const droughtYears = returnPeriodYears('drought', s.seasonYear);
-      const heatYears = returnPeriodYears('heat', s.seasonYear);
-      this.bTempAvg.textContent = `≈ +${avg} °C above pre-industrial — the global average (IPCC AR6, middle-of-the-road pathway)`;
-      this.bTempFreq.textContent = `In plain terms: the drought that used to strike once a decade now returns every ~${droughtYears} years — the once-a-decade heatwave, every ~${heatYears}.`;
-      this.bTempMax.textContent = `And averages hide the peaks: summer's hottest days here run ≈ +${hotDayAt(s.seasonYear)} °C.`;
-      this.bTemp.title =
-        'Central estimate vs pre-industrial for a middle-of-the-road emissions pathway (IPCC AR6, ≈SSP2-4.5). Return periods interpolate the AR6 SPM frequency increases for once-per-decade droughts (drying regions) and heat events over land. A global average understates a fire season: land warms faster than the mean, and hot extremes rise roughly 1.5–2× faster — the peak-day figure uses the low end of that range.';
+      this.bDegNum.textContent = `≈ +${avg} °C`;
+      this.bDrought.textContent = `now every ~${returnPeriodYears('drought', s.seasonYear)} yrs`;
+      this.bHeat.textContent = `now every ~${returnPeriodYears('heat', s.seasonYear)} yrs`;
+      this.bPeak.textContent = `≈ +${hotDayAt(s.seasonYear)} °C`;
+      this.bClimate.title =
+        'Central estimate vs pre-industrial for a middle-of-the-road emissions pathway (IPCC AR6, ≈SSP2-4.5). Return periods interpolate the AR6 SPM frequency increases for once-per-decade droughts (drying regions) and heat events over land. Hot extremes rise roughly 1.5–2× faster than the global mean — the peak-day figure uses the low end of that range.';
     }
     this.bGrowth.hidden = !grew;
     const unlock = unlockNotes[s.seasonYear];
