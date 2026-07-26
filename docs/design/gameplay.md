@@ -270,7 +270,7 @@ Canonical table in [`../PLAN.md`](../PLAN.md) §2.2; teaching rationale in [`pro
 
 ### 6.1 A year always ends — with the rains
 
-The season timer **is** the autumn rains: at `seasonLen(t)` ticks they arrive and end every fire (a somber fast-forward montage shows anything still burning take what it can first). `seasonLen` grows every season — the rains come later each half-decade, which is both the difficulty curve and the visible climate signal on the HUD's season bar. If all fires are out and no scripted ignitions remain, the season can end early. **There is no fail screen and no replay prompt.** One exception: if every village is lost, the campaign cuts to the early ending "The Year the Line Broke" (ux doc §1.7).
+The season timer **is** the autumn rains: at `seasonLen(t)` ticks they arrive and end every fire (a somber fast-forward montage shows anything still burning take what it can first). `seasonLen` grows every season — the rains come later each half-decade, which is both the difficulty curve and the visible climate signal on the HUD's season bar. If all fires are out and no scripted ignitions remain, the season winds down: an alert announces it and the season ends after a short grace (~12 s) — the player is never left waiting on a random ignition that may not come. **There is no fail screen and no replay prompt.** One exception: if every village is lost, the campaign cuts to the early ending "The Year the Line Broke" (ux doc §1.7).
 
 Mid-season **relief rains** (all fires −3 intensity, global wet 20 ticks) are guaranteed through 2035, 50 % likely 2040–2055, and **never occur from 2060** — the 2060 briefing says so, pointedly.
 

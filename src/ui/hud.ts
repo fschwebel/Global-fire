@@ -9,6 +9,17 @@ function el<T extends HTMLElement>(id: string): T {
   return node as T;
 }
 
+/**
+ * One-line loss summary that respects the reveal schedule: a counter the
+ * player hasn't been introduced to must never leak through campaign totals.
+ */
+export function statLine(stats: Stats, year: number): string {
+  const parts = [`${stats.hectaresBurnt} ha`];
+  if (year >= reveals.animals) parts.push(`~${stats.animalsKilled} animals`);
+  if (year >= reveals.houses) parts.push(`${stats.housesLost} homes`);
+  return parts.join(' · ');
+}
+
 function engineStatus(s: GameState, t: Truck): string {
   if (t.path.length > 0) return 'En route';
   for (let dy = -1; dy <= 1; dy++)
@@ -145,6 +156,9 @@ export class Hud {
         case 'reliefRain':
           this.pushAlert('Rain moves through the valley.');
           break;
+        case 'seasonWindingDown':
+          this.pushAlert('All fires are out — the season winds down.');
+          break;
         case 'seasonEnded':
           break; // campaign flow (main.ts) owns the debrief
       }
@@ -185,9 +199,7 @@ export class Hud {
     } else {
       this.dTitle.textContent = 'Season over — the rains arrive';
       this.dCampaign.textContent =
-        year > 2026
-          ? `Campaign so far: ${campaign.hectaresBurnt} ha · ~${campaign.animalsKilled} animals · ${campaign.housesLost} homes`
-          : '';
+        year > 2026 ? `Campaign so far: ${statLine(campaign, year)}` : '';
       this.restartBtn.textContent = 'Continue';
     }
     this.debrief.hidden = false;

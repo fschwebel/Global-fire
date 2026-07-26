@@ -120,6 +120,8 @@ export interface GameState {
   randomIgnitionRate: number;
   /** Ticks of visible rainfall remaining (presentation window; mechanics apply separately). */
   rainTicks: number;
+  /** Consecutive quiet ticks (no fire, schedule done) — the season winds down when it accumulates. */
+  quietTicks: number;
   station: Point;
   trucks: Truck[];
   stats: Stats;
@@ -139,6 +141,7 @@ export type GameEvent =
   | { type: 'engineDispatched'; truckId: number; x: number; y: number }
   | { type: 'reliefRain' }
   | { type: 'windShift' }
+  | { type: 'seasonWindingDown' }
   | { type: 'seasonEnded'; report: Stats };
 
 export function idx(s: { w: number }, x: number, y: number): number {

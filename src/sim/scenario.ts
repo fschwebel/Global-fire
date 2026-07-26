@@ -464,6 +464,7 @@ export function createSeason(seed: number, seasonIndex = 0, carryGrid?: Cell[]):
     seasonLen: params.seasonLen,
     randomIgnitionRate: params.randomIgnitionRate,
     rainTicks: 0,
+    quietTicks: 0,
     station,
     trucks: [1, 2].map((id) => ({
       id,

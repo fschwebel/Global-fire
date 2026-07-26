@@ -125,6 +125,31 @@ describe('season lifecycle', () => {
     expect(reignited).toBeLessThanOrEqual(10);
   });
 
+  it('a quiet valley winds the season down even when random ignitions exist (2040 bug)', () => {
+    const s = createSeason(42, 3); // 2040: randomIgnitionRate > 0
+    expect(s.randomIgnitionRate).toBeGreaterThan(0);
+    // Mark the whole schedule as delivered, then extinguish everything.
+    for (const ig of s.script.ignitions) ig.done = true;
+    for (const c of s.grid) {
+      if (c.state === 'burning') {
+        c.state = 'unburnt';
+        c.intensity = 0;
+        c.detected = false;
+      }
+    }
+    s.tick = Math.max(s.tick, 41);
+    let windingDown = false;
+    let endedAfter = -1;
+    for (let i = 0; i < 60 && endedAfter === -1; i++) {
+      const events = step(s);
+      if (events.some((e) => e.type === 'seasonWindingDown')) windingDown = true;
+      if (s.ended) endedAfter = i;
+    }
+    expect(windingDown).toBe(true);
+    expect(endedAfter).toBeGreaterThanOrEqual(0);
+    expect(endedAfter).toBeLessThan(40); // ~12s grace, not the full season timer
+  });
+
   it('relief rain opens a visible rain window that then closes', () => {
     const s = createSeason(42, 0);
     s.script.reliefRains[0]!.tick = 30;
@@ -423,6 +448,23 @@ describe('campaign', () => {
     const late = createSeason(42, 9);
     for (let i = 0; i < seasons[9]!.seasonLen + 200 && !late.ended; i++) step(late);
     expect(late.stats.hectaresBurnt).toBeGreaterThan(early.stats.hectaresBurnt);
+  });
+});
+
+describe('stat reveals', () => {
+  it('campaign totals never leak a counter before its reveal season', async () => {
+    const { statLine } = await import('../src/ui/hud');
+    const stats = {
+      hectaresBurnt: 120,
+      animalsKilled: 300,
+      housesLost: 4,
+      firefightersLost: 0,
+      civiliansLost: 0,
+    };
+    expect(statLine(stats, 2026)).toBe('120 ha');
+    expect(statLine(stats, 2030)).toBe('120 ha · ~300 animals');
+    expect(statLine(stats, 2035)).toBe('120 ha · ~300 animals · 4 homes');
+    expect(statLine(stats, 2070)).toContain('4 homes');
   });
 });
 

@@ -200,11 +200,21 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
       next.tick = s.tick + ignitionSchedule.quietGap;
   }
 
-  // Season end: after the rains have killed the last fire, or early when the
-  // schedule is exhausted and the valley is quiet.
+  // A quiet valley with a finished schedule winds the season down — announced,
+  // then ended after a short grace, so the player is never left waiting for a
+  // random ignition that may never come.
+  if (!anyBurning && scheduleDone && !rainsArrived && s.tick > 40) {
+    if (s.quietTicks === 0) events.push({ type: 'seasonWindingDown' });
+    s.quietTicks += 1;
+  } else if (anyBurning) {
+    s.quietTicks = 0;
+  }
+
+  // Season end: after the rains have killed the last fire, or early once the
+  // wind-down grace has passed with the valley still quiet.
   if (
     (rainsArrived && !anyBurning) ||
-    (!anyBurning && scheduleDone && s.tick > 40 && s.randomIgnitionRate === 0)
+    (!anyBurning && scheduleDone && s.tick > 40 && s.quietTicks >= ignitionSchedule.windDownTicks)
   ) {
     s.ended = true;
     events.push({ type: 'seasonEnded', report: { ...s.stats } });
