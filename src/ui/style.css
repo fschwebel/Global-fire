@@ -403,6 +403,15 @@ body {
   color: #8a9284;
 }
 
+/* The source tag sits tight under the card frame, unmistakably an attribution. */
+#b-climate-src {
+  width: min(480px, 92vw);
+  margin-top: -12px;
+  text-align: right;
+  font-size: 11px;
+  color: #7f887b;
+}
+
 #b-growth {
   max-width: 440px;
   color: #cdd8c2;

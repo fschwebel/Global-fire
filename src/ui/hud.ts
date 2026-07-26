@@ -97,6 +97,7 @@ export class Hud {
   private civs = el<HTMLSpanElement>('civs');
   private year = el<HTMLDivElement>('year');
   private bClimate = el<HTMLElement>('b-climate');
+  private bClimateSrc = el<HTMLParagraphElement>('b-climate-src');
   private bDegNum = el<HTMLSpanElement>('b-deg-num');
   private bDrought = el<HTMLElement>('b-drought');
   private bHeat = el<HTMLElement>('b-heat');
@@ -435,6 +436,7 @@ export class Hud {
     this.bYear.textContent = String(s.seasonYear);
     const avg = warming[s.seasonYear];
     this.bClimate.hidden = avg === undefined;
+    this.bClimateSrc.hidden = avg === undefined;
     if (avg !== undefined) {
       this.bDegNum.textContent = `≈ +${avg} °C`;
       this.bDrought.textContent = `now every ~${returnPeriodYears('drought', s.seasonYear)} yrs`;
