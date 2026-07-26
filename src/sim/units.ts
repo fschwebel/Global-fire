@@ -352,6 +352,7 @@ export function updateCrews(s: GameState): void {
       crew.cutProgress += 1;
       if (crew.cutProgress >= CU.cutTicks) {
         cellAt(s, job.x, job.y).type = 'firebreak'; // baseType keeps the old ground
+        s.terrainVersion += 1; // the baked terrain layer must repaint
         crew.jobs.shift();
         crew.cutProgress = 0;
       }

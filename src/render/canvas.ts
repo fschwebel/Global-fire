@@ -1,4 +1,5 @@
 import { bomber as B, regrowth as RG, truck as T, tower as TW } from '../sim/balance';
+import { hash2 } from '../sim/rng';
 import type { GameState, TileType } from '../sim/state';
 import { idx } from '../sim/state';
 
@@ -14,6 +15,31 @@ const TERRAIN: Record<TileType, string> = {
   firebreak: '#8d6e63',
   rock: '#8f948d',
 };
+
+type RGB = [number, number, number];
+
+/**
+ * Era palette: as the campaign dries out, vegetation yellows and thins. Each
+ * ramp runs healthy (2026) → arid (2070), driven by the season's dryness.
+ */
+const VEG_RAMP: Partial<Record<TileType, { from: RGB; to: RGB }>> = {
+  dense: { from: [27, 94, 32], to: [86, 87, 28] },
+  sparse: { from: [63, 138, 63], to: [138, 138, 53] },
+  grass: { from: [156, 204, 101], to: [214, 195, 85] },
+};
+
+const CANOPY_RAMP: { from: RGB; to: RGB } = { from: [15, 61, 19], to: [69, 73, 26] };
+const TUFT_RAMP: { from: RGB; to: RGB } = { from: [111, 162, 60], to: [176, 160, 71] };
+
+function lerpRGB(ramp: { from: RGB; to: RGB }, t: number): string {
+  const c = ramp.from.map((f, i) => Math.round(f + (ramp.to[i]! - f) * t));
+  return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+}
+
+/** 0 (lush 2026) → 1 (parched 2070), from the season's dryness curve. */
+function aridity(dryness: number): number {
+  return Math.min(1, Math.max(0, (dryness - 0.32) / (0.85 - 0.32)));
+}
 
 /**
  * Pixel position of a ground unit in world space, interpolated along the tiles
@@ -47,6 +73,8 @@ export class Renderer {
   /** Animation clock: advances only while the sim runs, so pause freezes the scene. */
   private animTime = 0;
   private lastDrawAt = performance.now();
+  /** Ground types seen at the last bake — crew cuts bump the sim's counter. */
+  private terrainVersion = -1;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -82,13 +110,40 @@ export class Renderer {
     if (!tctx) return;
     const s = this.state;
     const b = s.bounds;
+    const arid = aridity(s.dryness);
+    const canopy = lerpRGB(CANOPY_RAMP, arid);
+    const tuft = lerpRGB(TUFT_RAMP, arid);
     for (let y = b.y0; y < b.y1; y++)
       for (let x = b.x0; x < b.x1; x++) {
         const c = s.grid[idx(s, x, y)]!;
         const px = (x - b.x0) * TILE;
         const py = (y - b.y0) * TILE;
-        tctx.fillStyle = TERRAIN[c.type];
+        const ramp = VEG_RAMP[c.type];
+        tctx.fillStyle = ramp ? lerpRGB(ramp, arid) : TERRAIN[c.type];
         tctx.fillRect(px, py, TILE, TILE);
+        // Vegetation detail shrinks with the climate: trees get smaller and
+        // fewer, grass tufts shorter — the forest visibly loses stature.
+        if (c.type === 'dense' || c.type === 'sparse') {
+          const dense = c.type === 'dense';
+          const count = (dense ? 3 : 2) - (arid > 0.55 ? 1 : 0);
+          const r = (dense ? 3.8 : 3.1) - 1.4 * arid;
+          tctx.fillStyle = canopy;
+          for (let i = 0; i < count; i++) {
+            const tx = 4 + hash2(x, y, 11 + i) * (TILE - 8);
+            const tyy = 4 + hash2(y, x, 29 + i) * (TILE - 8);
+            tctx.beginPath();
+            tctx.arc(px + tx, py + tyy, r, 0, Math.PI * 2);
+            tctx.fill();
+          }
+        } else if (c.type === 'grass') {
+          const h = 5 - 3 * arid;
+          tctx.fillStyle = tuft;
+          for (let i = 0; i < 3; i++) {
+            const tx = 3 + hash2(x, y, 43 + i) * (TILE - 7);
+            const tyy = 4 + hash2(y, x, 61 + i) * (TILE - 9);
+            tctx.fillRect(px + tx, py + tyy, 1.4, h);
+          }
+        }
         if (c.type === 'house') {
           tctx.fillStyle = '#8a5a2b';
           tctx.fillRect(px + 3, py + 3, TILE - 6, TILE - 10);
@@ -111,6 +166,10 @@ export class Renderer {
   }
 
   draw(selectedTruckId: number | null, alpha = 1, running = true): void {
+    if (this.state.terrainVersion !== this.terrainVersion) {
+      this.terrainVersion = this.state.terrainVersion;
+      this.terrainDirty = true;
+    }
     if (this.terrainDirty) this.bakeTerrain();
     const s = this.state;
     const b = s.bounds;

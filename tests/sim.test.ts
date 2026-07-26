@@ -722,6 +722,7 @@ describe('unlockable means', () => {
     for (let i = 0; i < 60 && s.grid[target!.y * s.w + target!.x]!.type !== 'firebreak'; i++)
       step(s);
     expect(s.grid[target!.y * s.w + target!.x]!.type).toBe('firebreak');
+    expect(s.terrainVersion).toBeGreaterThan(0); // the renderer repaints the ground
   });
 });
 

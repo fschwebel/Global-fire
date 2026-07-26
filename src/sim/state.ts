@@ -173,6 +173,8 @@ export interface GameState {
   script: SeasonScript;
   rng: Rng;
   ended: boolean;
+  /** Bumped when ground types change mid-season (crew cuts) — the renderer rebakes terrain. */
+  terrainVersion: number;
 }
 
 /**

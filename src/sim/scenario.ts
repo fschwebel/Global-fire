@@ -580,6 +580,7 @@ export function createSeason(
     script: { ignitions: [], windShifts: [], reliefRains: [] },
     rng,
     ended: false,
+    terrainVersion: 0,
   };
   state.script = buildScript(state, seasonIndex, villages);
   return state;
