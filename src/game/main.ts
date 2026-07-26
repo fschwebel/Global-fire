@@ -112,7 +112,7 @@ const loop = new GameLoop(
     if (end && end.type === 'seasonEnded') onSeasonEnd(end.report);
   },
   (alpha) => {
-    renderer.draw(pinnedTruckId, alpha);
+    renderer.draw(pinnedTruckId, alpha, loop.speed > 0);
     hud.update(pinnedTruckId);
   },
 );

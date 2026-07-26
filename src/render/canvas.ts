@@ -44,6 +44,9 @@ export class Renderer {
   private seenBurnt = new Map<number, number>();
   /** Smoothed opacity of the rain overlay (fades showers in and out). */
   private rainAlpha = 0;
+  /** Animation clock: advances only while the sim runs, so pause freezes the scene. */
+  private animTime = 0;
+  private lastDrawAt = performance.now();
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -107,15 +110,18 @@ export class Renderer {
     this.terrainDirty = false;
   }
 
-  draw(selectedTruckId: number | null, alpha = 1): void {
+  draw(selectedTruckId: number | null, alpha = 1, running = true): void {
     if (this.terrainDirty) this.bakeTerrain();
     const s = this.state;
     const b = s.bounds;
     const ox = b.x0 * TILE;
     const oy = b.y0 * TILE;
     const ctx = this.ctx;
-    const now = performance.now();
-    const frame = Math.floor(now / 130); // per-frame flicker clock, independent of sim ticks
+    const realNow = performance.now();
+    if (running) this.animTime += Math.min(realNow - this.lastDrawAt, 100);
+    this.lastDrawAt = realNow;
+    const now = this.animTime;
+    const frame = Math.floor(now / 130); // flicker clock, independent of sim ticks, frozen on pause
     ctx.drawImage(this.terrain, 0, 0);
 
     for (let y = b.y0; y < b.y1; y++)
@@ -299,7 +305,7 @@ export class Renderer {
       ctx.fill();
     }
 
-    this.rainAlpha += ((s.rainTicks > 0 ? 1 : 0) - this.rainAlpha) * 0.06;
+    if (running) this.rainAlpha += ((s.rainTicks > 0 ? 1 : 0) - this.rainAlpha) * 0.06;
     if (this.rainAlpha > 0.02) this.drawRain(now);
   }
 
