@@ -54,25 +54,25 @@ export const ignitionSchedule = {
 };
 
 export const detection = {
-  DETECT_DELAY: 14, // ticks until a fire is reported on its own
+  DETECT_DELAY: 10, // ticks until a fire is reported on its own
   CALL_IN_RADIUS: 6, // tiles from truck/house/road → people call it in
 };
 
 export const truck = {
   cost: 40,
   moveSpeed: {
-    road: 4,
-    grass: 1.5,
-    sparse: 1.5,
-    dense: 0.75,
-    house: 1.5,
-    firebreak: 1.5,
-    rock: 0.75,
+    road: 5.5,
+    grass: 2.2,
+    sparse: 2.2,
+    dense: 1.1,
+    house: 2.2,
+    firebreak: 2.2,
+    rock: 1.1,
     water: 0,
   } satisfies Record<TileType, number>,
   extinguishPerTick: 4, // intensity removed per tick (cell regrows +1 → net −3)
-  waterCapacity: 24,
-  refillPerTick: 4,
+  waterCapacity: 30,
+  refillPerTick: 6,
   wetTimerOnExtinguish: 40, // fought ground holds — player work must visibly stick
   crew: 4,
 };
@@ -119,7 +119,7 @@ export const seasons: SeasonParams[] = [
     t: 0,
     dryness: 0.32,
     windStr: 0.2,
-    spreadMult: 0.82,
+    spreadMult: 0.72,
     scriptedIgnitions: 3,
     randomIgnitionRate: 0,
     seasonLen: 300,
@@ -130,7 +130,7 @@ export const seasons: SeasonParams[] = [
     t: 1,
     dryness: 0.38,
     windStr: 0.3,
-    spreadMult: 0.9,
+    spreadMult: 0.85,
     scriptedIgnitions: 3,
     randomIgnitionRate: 0,
     seasonLen: 300,

@@ -1,3 +1,4 @@
+import { truck as T } from '../sim/balance';
 import type { GameState, TileType, Truck } from '../sim/state';
 import { idx } from '../sim/state';
 
@@ -184,7 +185,7 @@ export class Renderer {
       ctx.fillStyle = '#222';
       ctx.fillRect(px + 3, py + TILE - 4, TILE - 6, 3);
       ctx.fillStyle = '#4a90d9';
-      ctx.fillRect(px + 3, py + TILE - 4, (TILE - 6) * (t.water / 24), 3);
+      ctx.fillRect(px + 3, py + TILE - 4, (TILE - 6) * (t.water / T.waterCapacity), 3);
     }
 
     this.rainAlpha += ((s.rainTicks > 0 ? 1 : 0) - this.rainAlpha) * 0.06;

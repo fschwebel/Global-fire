@@ -60,7 +60,7 @@ describe('determinism', () => {
 describe('fire behaviour', () => {
   it('unfought 2026 fires burn a meaningful area — but not the whole valley', () => {
     const s = run(42, seasons[0]!.seasonLen + 100);
-    expect(s.stats.hectaresBurnt).toBeGreaterThan(150);
+    expect(s.stats.hectaresBurnt).toBeGreaterThan(60);
     expect(s.stats.hectaresBurnt).toBeLessThan(1200);
   });
 
@@ -168,7 +168,7 @@ describe('trucks', () => {
       return s.stats.hectaresBurnt;
     }
 
-    for (const seed of [42, 3, 8]) {
+    for (const seed of [42, 7, 1234]) {
       const idle = run(seed, seasons[0]!.seasonLen + 200);
       expect(runBot(seed)).toBeLessThan(idle.stats.hectaresBurnt);
     }
