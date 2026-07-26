@@ -202,6 +202,21 @@ export const sectorSizes: [number, number][] = [
   [60, 40], // 2065, 2070
 ];
 
+/**
+ * Development boom and retreat: housing stock grows to ×1.5 of the 2026
+ * baseline by 2060 — new homes ring outward from each village — then managed
+ * retreat halves the peak to ×0.75 by 2070, farthest homes abandoned first.
+ */
+export const development = {
+  peakYear: 2060,
+  peakFactor: 1.5,
+  endYear: 2070,
+  /** Half the peak: 1.5 × 0.5. */
+  endFactor: 0.75,
+  /** New houses grow in rings around the village centre, at most this far (Chebyshev). */
+  maxRing: 5,
+};
+
 export const regrowth = {
   /** Years after a burn: scar → grass → sparse → original type. */
   grassAfter: 2,

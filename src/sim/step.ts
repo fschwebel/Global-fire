@@ -1,5 +1,6 @@
 import {
   detection,
+  development,
   droughtEvent,
   evac,
   habitatPerTile,
@@ -68,9 +69,10 @@ function applyCommands(s: GameState, commands: Command[], events: GameEvent[]): 
   }
 }
 
-/** The village a house tile belongs to (houses grow within 3 tiles of the centre). */
+/** The village a house tile belongs to (development builds up to maxRing out). */
 function villageAt(s: GameState, x: number, y: number): Village | null {
-  for (const v of s.villages) if (Math.max(Math.abs(v.x - x), Math.abs(v.y - y)) <= 4) return v;
+  for (const v of s.villages)
+    if (Math.max(Math.abs(v.x - x), Math.abs(v.y - y)) <= development.maxRing) return v;
   return null;
 }
 
@@ -227,9 +229,9 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
           events.push({ type: 'civilianDeaths', count: deaths });
         }
         c.occupants = 0;
-        // Some homes are rebuilt years later (baseType stays 'house' as the
-        // marker); the rest revert to grass — the village shrinks.
-        if (s.rng() >= regrowth.houseRebuildChance) c.baseType = 'grass';
+        // The lot reverts to grass; whether anything returns is the
+        // development curve's call between seasons (scenario.ts).
+        c.baseType = 'grass';
       } else if (c.type === 'dense' && s.rng() < regrowth.denseConversionChance) {
         c.baseType = 'grass'; // high-severity burn: permanent conversion
       }

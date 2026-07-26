@@ -1,5 +1,6 @@
 import {
   droughtEvent as DE,
+  development as DEV,
   ignitionSchedule as IG,
   map as M,
   regrowth as RG,
@@ -328,6 +329,79 @@ function applyRegrowth(cell: Cell, year: number): void {
     cell.type = vegetation ? 'grass' : cell.baseType;
 }
 
+/** Housing stock vs the 2026 baseline for a season year (balance: development). */
+export function developmentFactor(year: number): number {
+  if (year <= 2026) return 1;
+  if (year <= DEV.peakYear)
+    return 1 + (DEV.peakFactor - 1) * ((year - 2026) / (DEV.peakYear - 2026));
+  if (year >= DEV.endYear) return DEV.endFactor;
+  return (
+    DEV.peakFactor +
+    (DEV.endFactor - DEV.peakFactor) * ((year - DEV.peakYear) / (DEV.endYear - DEV.peakYear))
+  );
+}
+
+/**
+ * Between seasons, each village's housing stock is adjusted toward its era
+ * target: growth builds outward in stable ring order (deterministic — a
+ * reloaded campaign redevelops the same lots); retreat abandons the farthest
+ * homes first, lots reverting to grass with no loss counted — people leave
+ * before the fire chooses.
+ */
+function applyDevelopment(grid: Cell[], fresh: Cell[], villages: Point[], year: number): void {
+  const factor = developmentFactor(year);
+  const buildable = (t: TileType) => t === 'grass' || t === 'sparse' || t === 'dense';
+  for (const v of villages) {
+    let baseline = 0;
+    for (let dy = -4; dy <= 4; dy++)
+      for (let dx = -4; dx <= 4; dx++) {
+        const nx = v.x + dx;
+        const ny = v.y + dy;
+        if (inBounds({ w: M.W, h: M.H }, nx, ny) && fresh[ny * M.W + nx]!.type === 'house')
+          baseline++;
+      }
+    const target = Math.round(baseline * factor);
+
+    const houses: { i: number; d: number }[] = [];
+    for (let dy = -DEV.maxRing; dy <= DEV.maxRing; dy++)
+      for (let dx = -DEV.maxRing; dx <= DEV.maxRing; dx++) {
+        const nx = v.x + dx;
+        const ny = v.y + dy;
+        if (!inBounds({ w: M.W, h: M.H }, nx, ny)) continue;
+        if (grid[ny * M.W + nx]!.type === 'house')
+          houses.push({ i: ny * M.W + nx, d: Math.max(Math.abs(dx), Math.abs(dy)) });
+      }
+    let current = houses.length;
+
+    if (current < target) {
+      for (let ring = 1; ring <= DEV.maxRing && current < target; ring++)
+        for (let dy = -ring; dy <= ring && current < target; dy++)
+          for (let dx = -ring; dx <= ring && current < target; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+            const nx = v.x + dx;
+            const ny = v.y + dy;
+            if (!inBounds({ w: M.W, h: M.H }, nx, ny)) continue;
+            const cell = grid[ny * M.W + nx]!;
+            if (!buildable(cell.type)) continue;
+            cell.type = 'house';
+            cell.baseType = 'house';
+            cell.occupants =
+              M.occupantsMin +
+              Math.floor(hash2(nx, ny, 0xd37e) * (M.occupantsMax - M.occupantsMin + 1));
+            current++;
+          }
+    } else if (current > target) {
+      houses.sort((a, b) => b.d - a.d || a.i - b.i);
+      for (let k = 0; k < current - target; k++) {
+        const cell = grid[houses[k]!.i]!;
+        cell.type = 'grass';
+        cell.baseType = 'grass';
+        cell.occupants = 0;
+      }
+    }
+  }
+}
+
 /**
  * When the sector grows, the revealed ring must not meet the old edge as a
  * ruler line: where fire burnt against the old boundary, a short, decaying
@@ -512,6 +586,7 @@ export function createSeason(
   }
   if (carryGrid && seasonIndex > 0) blendSectorSeam(grid, seed, seasonIndex, station);
   for (const cell of grid) applyRegrowth(cell, params.year);
+  applyDevelopment(grid, freshGrid, villages, params.year);
 
   const state: GameState = {
     seed,
