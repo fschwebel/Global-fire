@@ -1106,7 +1106,7 @@ describe('danger rule retune', () => {
     const t = s.trucks[0]!;
     t.x = s.bounds.x0 + 10;
     t.y = s.bounds.y0 + 10;
-    t.water = 0;
+    t.water = 10; // watered: the dry-tank rule must not muddy the threshold test
     const crew = s.crews[0]!;
     crew.x = s.bounds.x0 + 30;
     crew.y = s.bounds.y0 + 20;
@@ -1167,5 +1167,64 @@ describe('danger rule retune', () => {
     // The open corridor ends are flanked on both sides — not a way out.
     expect(lost).toBe(true);
     expect(s.stats.firefightersLost).toBe(4);
+  });
+});
+
+describe('dry-tank danger', () => {
+  it('an empty tank makes any adjacent fire a danger; a full one does not', () => {
+    const setup = (water: number) => {
+      const s = createSeason(42, 4); // 2045
+      const t = s.trucks[0]!;
+      t.x = s.bounds.x0 + 12;
+      t.y = s.bounds.y0 + 12;
+      t.water = water;
+      // One weak grass-grade fire beside the engine — far below the heavy bar.
+      const i = (t.y - 1) * s.w + (t.x - 1);
+      s.grid[i]!.type = 'grass';
+      s.grid[i]!.state = 'burning';
+      s.grid[i]!.intensity = 2;
+      s.grid[i]!.fuel = 99;
+      return { s, keep: i };
+    };
+
+    const dry = setup(0);
+    let warned = false;
+    for (let i = 0; i < 6; i++) {
+      for (const ev of step(dry.s))
+        if (ev.type === 'crewDanger' && ev.unit === 'engine') warned = true;
+      const c = dry.s.grid[dry.keep]!;
+      c.state = 'burning';
+      c.intensity = 2;
+      c.fuel = 99;
+      dry.s.grid.forEach((cc, ci) => {
+        if (ci !== dry.keep && cc.state === 'burning') {
+          cc.state = 'unburnt';
+          cc.intensity = 0;
+          cc.igniteAge = 0;
+          cc.detected = false;
+        }
+      });
+    }
+    expect(warned).toBe(true); // dry tank: any fire beside you is danger
+
+    const wet = setup(10);
+    let warnedWet = false;
+    for (let i = 0; i < 6; i++) {
+      for (const ev of step(wet.s))
+        if (ev.type === 'crewDanger' && ev.unit === 'engine') warnedWet = true;
+      const c = wet.s.grid[wet.keep]!;
+      c.state = 'burning';
+      c.intensity = 2;
+      c.fuel = 99;
+      wet.s.grid.forEach((cc, ci) => {
+        if (ci !== wet.keep && cc.state === 'burning') {
+          cc.state = 'unburnt';
+          cc.intensity = 0;
+          cc.igniteAge = 0;
+          cc.detected = false;
+        }
+      });
+    }
+    expect(warnedWet).toBe(false); // with water, one weak fire is just the job
   });
 });

@@ -78,7 +78,7 @@ export const truck = {
     dryriver: 1.6, // a rough bed, but crossable
   } satisfies Record<TileType, number>,
   extinguishPerTick: 4, // intensity removed per tick (cell regrows +1 → net −3)
-  waterCapacity: 30,
+  waterCapacity: 22, // 25% down from 30 — tanks run dry sooner, and dry tanks are danger
   refillPerTick: 6,
   wetTimerOnExtinguish: 40, // fought ground holds — player work must visibly stick
   crew: 4,

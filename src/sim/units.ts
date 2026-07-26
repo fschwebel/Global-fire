@@ -472,8 +472,27 @@ function heavyNeighbors(s: GameState, x: number, y: number): number {
   return heavy;
 }
 
-function inDanger(s: GameState, u: { x: number; y: number }, neighbors: number): boolean {
+/** Any burning Moore neighbour at all, regardless of intensity. */
+function anyBurningNeighbor(s: GameState, x: number, y: number): boolean {
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = x + dx;
+      const ny = y + dy;
+      if (inActive(s, nx, ny) && cellAt(s, nx, ny).state === 'burning') return true;
+    }
+  return false;
+}
+
+function inDanger(
+  s: GameState,
+  u: { x: number; y: number },
+  neighbors: number,
+  tankEmpty: boolean,
+): boolean {
   if (cellAt(s, u.x, u.y).state === 'burning') return true;
+  // No water, no defense: a dry-tank engine is in danger beside any fire at all.
+  if (tankEmpty && anyBurningNeighbor(s, u.x, u.y)) return true;
   return heavyNeighbors(s, u.x, u.y) >= neighbors;
 }
 
@@ -532,7 +551,8 @@ function dangerSweep(
 ): void {
   const lost: number[] = [];
   for (const u of units) {
-    if (!inDanger(s, u, neighbors)) {
+    const tankEmpty = kind === 'engine' && (u as Truck).water <= 0;
+    if (!inDanger(s, u, neighbors, tankEmpty)) {
       u.dangerTicks = 0;
       continue;
     }
