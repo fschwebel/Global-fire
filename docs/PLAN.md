@@ -42,7 +42,7 @@ These resolve every contradiction found in design review. Each design doc restat
 | 2040 | Ordinary | Watch towers | — | An undetected ignition grows for 7 s as a distant smoke column |
 | 2045 | **SPIKE — The Heat Dome** | — | **Firefighters lost** (revealed at zero, scripted near-miss) | Ember spotting + crew danger rule activate |
 | 2050 | Ordinary | Fire crews / controlled burns | **Population lost** | The WUI district is complete: decades of new houses inside the forest edge |
-| 2055 | **SPIKE — The Early Season** | 2nd water bomber purchasable | — | Season opens with 2 fires already burning; first night windows |
+| 2055 | **SPIKE — The Early Season** | 2nd water bomber | — | Season opens with 2 fires already burning; first night windows |
 | 2060 | Ordinary (elevated) | — | — | Mid-season relief rains disappear from the forecast for good; permanent conversion visible |
 | 2065 | **SPIKE — The Interface** | — | — | Ember storm into the WUI; convoy evacuation set piece |
 | 2070 | **Finale — The Firestorm** | — | Retrospective dashboard | Pyrocumulonimbus event, wind reversal, everything at once |

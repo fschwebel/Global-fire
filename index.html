@@ -18,6 +18,8 @@
           <span id="hectares">0 ha burnt</span>
           <span id="animals" hidden></span>
           <span id="houses" hidden></span>
+          <span id="ffs" hidden></span>
+          <span id="civs" hidden></span>
         </div>
         <div id="weather">
           <span id="windarrow">➤</span>
@@ -29,9 +31,10 @@
         <div id="sidebar">
           <div id="palette">
             <button id="tool-engine" type="button" class="tool active" title="Dispatch engine — click the map, the nearest engine responds">🚒</button>
-            <div class="slot" title=""></div>
-            <div class="slot" title=""></div>
-            <div class="slot" title=""></div>
+            <button id="tool-evac" type="button" class="tool locked" title="">📢</button>
+            <button id="tool-bomber" type="button" class="tool locked" title="">🛩</button>
+            <button id="tool-tower" type="button" class="tool locked" title="">🗼<span id="tower-count" class="badge" hidden></span></button>
+            <button id="tool-crew" type="button" class="tool locked" title="">⛏</button>
           </div>
           <div id="engines"></div>
         </div>
@@ -54,6 +57,7 @@
         <p id="b-growth" hidden>
           The department has widened your sector — more forest, more people, yours to protect.
         </p>
+        <p id="b-unlock" hidden></p>
         <p id="b-fact"></p>
         <button id="btn-begin" type="button">Begin season</button>
       </div>

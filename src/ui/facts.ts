@@ -15,8 +15,20 @@ export const briefingFacts: Record<number, string> = {
   2070: 'Australia’s Black Summer generated dozens of fire-triggered thunderstorms — fires so large they made their own weather.',
 };
 
-/** Season year each loss counter joins the stat bar (canon: PLAN.md §2.2). */
+/** "New this season" briefing line — each means arrives free, reassigned to the sector. */
+export const unlockNotes: Record<number, string> = {
+  2030: 'New this season: evacuation orders. Arm 📢 and click a village — clearing it takes time, so order early.',
+  2035: 'New this season: a water bomber, reassigned to your sector. Arm 🛩 and click the map for a drop; it must return to reload.',
+  2040: 'New this season: two watch towers. Arm 🗼 and place them where nobody would call a fire in — a tower reports smoke almost instantly.',
+  2050: 'New this season: a fire crew. Arm ⛏ and click vegetation tiles — the crew walks out and cuts them into a firebreak line.',
+  2055: 'New this season: a second water bomber joins the sector.',
+};
+
+/** Season year each loss counter joins the stat bar (canon: progression doc §1.3). */
 export const reveals = {
   animals: 2030,
   houses: 2035,
+  /** Revealed at zero — the counter itself is the warning. */
+  firefighters: 2045,
+  civilians: 2050,
 };

@@ -177,7 +177,7 @@ Cost: up to 2,400 cells (only the active sector is stepped) × ≤ 8 neighbour c
 
 ### 3.4 Scars and regrowth (applied across the gap between seasons)
 
-Burnt vegetation regrows on a real-years clock, advanced by the 4–5 years that pass between seasons: ash → scarred grassland (+2 yr; the ash tint stays visible ~9 yr) → sparse (+6 yr, dense base only) → original type (+12 yr). Infrastructure (roads, firebreaks) is repaired to its base type by the next season. Dense forest that burns out rolls **25 % permanent conversion** to grassland. A burnt house rolls **50 % rebuilding**: a rebuilt lot lies as scarred grass for **5 years**, then the house stands again with a new family; the rest revert to grass for good — the village shrinks. A scarred map carries less fuel, which keeps bad seasons from snowballing.
+Burnt vegetation regrows on a real-years clock, advanced by the 4–5 years that pass between seasons: ash → scarred grassland (+2 yr; the ash tint stays visible ~9 yr) → sparse (+6 yr, dense base only) → original type (+12 yr). Infrastructure (roads, firebreaks) is repaired to its base type by the next season. Dense forest that burns out rolls **25 % permanent conversion** to grassland. A burnt house rolls **50 % rebuilding**: a rebuilt lot lies as scarred grass for **5 years**, then the house stands again with a new family; the rest revert to grass for good — the village shrinks. A scarred map carries less fuel, which keeps bad seasons from snowballing. When the sector widens, burn history bleeds a few tiles past the old boundary (decaying spillover, stamped deterministically at reveal) so the new ring meets an organic fire edge rather than a ruler line.
 
 ---
 
@@ -189,7 +189,7 @@ Burnt vegetation regrows on a real-years clock, advanced by the 4–5 years that
 - **Cooldowns** pace the real-time layer (bomber sorties, evac orders). Action points rejected (turn-based artifact); cooldowns-only rejected (no strategic layer, no season-over-season consequence).
 - **Budget:** `budget(s) = 80 + 12·t + 0.25 × unspent(s−1) + perfBonus(s−1)`, where `t = seasonIndex` (0–9) and `perfBonus = round(score/50)` (0–20, from the internal score §6.2). Clamped to a floor `minViable(s) = 90 + 6·t` that always affords the minimum effective loadout — the campaign is never mathematically lost.
 - Purchases persist across seasons (trucks survive unless destroyed; towers are permanent) — losing a truck hurts half a decade later too.
-- **Unlock-season grants are free** ("reassigned to your sector"): 2 trucks (2026), the evacuation capability (2030), water bomber #1 (2035), tower #1 (2040), fire crew #1 (2050). Budget buys extras, repairs, replacements, and additional placements.
+- **Unlock-season grants are free** ("reassigned to your sector"): 2 trucks (2026), the evacuation capability (2030), water bomber #1 (2035), towers ×2 (2040), fire crew #1 (2050), water bomber #2 (2055). Until the budget system ships (post-1.0), every grant arrives free; budget will buy extras, repairs, replacements, and additional placements.
 
 ### 4.2 Fire truck (2026)
 
@@ -231,7 +231,7 @@ So: undetected fast fire onto a sleeping village ≈ 35 % — a full half-minute
 
 | Stat | v0 |
 |---|---|
-| Fleet | #1 free in 2035; #2 purchasable from 2055 at 150 |
+| Fleet | #1 free in 2035; #2 free in 2055 (purchase at 150 once the budget system ships) |
 | Sortie | player draws a drop line; the plane flies in visibly |
 | Flight time (call → drop) | 6 ticks — the fire keeps moving under the reticle; lead your target |
 | Drop | **1 × 5 tile line** (rotatable): intensity ≤ 5 → extinguished (WET 40) · intensity > 5 → −6 intensity · unburnt → WET 40 |

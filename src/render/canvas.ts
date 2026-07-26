@@ -1,5 +1,5 @@
-import { regrowth as RG, truck as T } from '../sim/balance';
-import type { GameState, TileType, Truck } from '../sim/state';
+import { bomber as B, regrowth as RG, truck as T, tower as TW } from '../sim/balance';
+import type { GameState, TileType } from '../sim/state';
 import { idx } from '../sim/state';
 
 export const TILE = 20;
@@ -16,10 +16,13 @@ const TERRAIN: Record<TileType, string> = {
 };
 
 /**
- * Pixel position of an engine in world space, interpolated along the tiles it
- * traversed during the current tick — engines drive instead of teleporting.
+ * Pixel position of a ground unit in world space, interpolated along the tiles
+ * it traversed during the current tick — units drive instead of teleporting.
  */
-function truckPixelPos(t: Truck, alpha: number): { px: number; py: number } {
+function truckPixelPos(
+  t: { x: number; y: number; trail: { x: number; y: number }[] },
+  alpha: number,
+): { px: number; py: number } {
   const trail = t.trail;
   if (!trail || trail.length <= 1) return { px: t.x * TILE, py: t.y * TILE };
   const segs = trail.length - 1;
@@ -208,6 +211,92 @@ export class Renderer {
       ctx.fillRect(px + 3, py + TILE - 4, TILE - 6, 3);
       ctx.fillStyle = '#4a90d9';
       ctx.fillRect(px + 3, py + TILE - 4, (TILE - 6) * (t.water / T.waterCapacity), 3);
+    }
+
+    // Evacuations: a ring around the village — amber while moving, grey once clear.
+    for (const v of s.villages) {
+      if (v.evac === 'none') continue;
+      const vx = (v.x + 0.5) * TILE - ox;
+      const vy = (v.y + 0.5) * TILE - oy;
+      const pulsing = v.evac === 'inProgress';
+      ctx.strokeStyle = pulsing
+        ? `rgba(255, 179, 0, ${0.55 + 0.35 * Math.sin(now / 220)})`
+        : 'rgba(220, 220, 220, 0.35)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.arc(vx, vy, 4.2 * TILE, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Watch towers: mast + a faint ring showing the detection radius.
+    for (const tw of s.towers) {
+      const px = tw.x * TILE - ox;
+      const py = tw.y * TILE - oy;
+      ctx.strokeStyle = 'rgba(232, 228, 218, 0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(px + TILE / 2, py + TILE / 2, TW.radius * TILE, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#4e5d6b';
+      ctx.fillRect(px + 7, py + 4, 6, TILE - 6);
+      ctx.fillStyle = '#dce6f0';
+      ctx.fillRect(px + 5, py + 3, 10, 5);
+    }
+
+    // Fire crews: hi-vis ground unit + markers on the queued cut line.
+    for (const c of s.crews) {
+      ctx.strokeStyle = 'rgba(255, 213, 79, 0.6)';
+      ctx.lineWidth = 1.5;
+      for (const job of c.jobs) {
+        const jx = job.x * TILE - ox;
+        const jy = job.y * TILE - oy;
+        ctx.strokeRect(jx + 5, jy + 5, TILE - 10, TILE - 10);
+      }
+      const pos = truckPixelPos(c, alpha);
+      const px = pos.px - ox;
+      const py = pos.py - oy;
+      ctx.fillStyle = '#fdd835';
+      ctx.fillRect(px + 5, py + 5, TILE - 10, TILE - 10);
+      ctx.fillStyle = '#5d4037';
+      ctx.fillRect(px + 8, py + 8, TILE - 16, TILE - 16);
+    }
+
+    // Water bombers: airborne between station and target; water sheet on the drop.
+    for (const b of s.bombers) {
+      if (b.state === 'ready' || b.state === 'reloading') continue; // at the airbase
+      if (b.state === 'dropping' && b.target) {
+        const tx = (b.target.x + 0.5) * TILE - ox;
+        const ty = (b.target.y + 0.5) * TILE - oy;
+        ctx.fillStyle = 'rgba(80, 150, 230, 0.35)';
+        ctx.beginPath();
+        ctx.arc(tx, ty, B.dropRadius * TILE, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const fx = (b.px + (b.x - b.px) * alpha + 0.5) * TILE - ox;
+      const fy = (b.py + (b.y - b.py) * alpha + 0.5) * TILE - oy;
+      const to = b.state === 'returning' ? s.station : (b.target ?? s.station);
+      const ang = Math.atan2(to.y - b.y, to.x - b.x);
+      ctx.save();
+      ctx.translate(fx, fy);
+      ctx.rotate(ang);
+      ctx.fillStyle = '#f5f0e6';
+      ctx.beginPath();
+      ctx.moveTo(12, 0);
+      ctx.lineTo(-8, -4);
+      ctx.lineTo(-8, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(-3, -10, 5, 20); // wings
+      ctx.fillStyle = '#c62828';
+      ctx.fillRect(-8, -3, 4, 6); // tail
+      ctx.restore();
+      // Shadow hint so the plane reads as airborne.
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+      ctx.beginPath();
+      ctx.ellipse(fx + 6, fy + 10, 8, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     this.rainAlpha += ((s.rainTicks > 0 ? 1 : 0) - this.rainAlpha) * 0.06;

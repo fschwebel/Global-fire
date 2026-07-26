@@ -61,6 +61,44 @@ export interface Truck {
   trail: Point[];
 }
 
+export interface Village {
+  id: number;
+  x: number;
+  y: number;
+  /** Evacuation status this season; residents return between seasons. */
+  evac: 'none' | 'inProgress' | 'done';
+  evacStartTick: number;
+}
+
+export type BomberState = 'ready' | 'outbound' | 'dropping' | 'returning' | 'reloading';
+
+export interface Bomber {
+  id: number;
+  /** World-tile coordinates; fractional while in flight. */
+  x: number;
+  y: number;
+  /** Previous-tick position — the renderer interpolates the flight. */
+  px: number;
+  py: number;
+  state: BomberState;
+  target: Point | null;
+  /** Ticks remaining in the current dropping/reloading phase. */
+  phaseTicks: number;
+}
+
+export interface Crew {
+  id: number;
+  x: number;
+  y: number;
+  path: Point[];
+  movePoints: number;
+  /** Ordered tiles to cut into firebreak; front = current job. */
+  jobs: Point[];
+  /** Cutting progress (ticks) on the current tile. */
+  cutProgress: number;
+  trail: Point[];
+}
+
 export interface Wind {
   /** Radians; direction the wind blows TOWARD. */
   dir: number;
@@ -124,6 +162,13 @@ export interface GameState {
   quietTicks: number;
   station: Point;
   trucks: Truck[];
+  villages: Village[];
+  bombers: Bomber[];
+  crews: Crew[];
+  /** Placed watch towers — structures that persist across seasons. */
+  towers: Point[];
+  /** Towers granted but not yet placed. */
+  towersAvailable: number;
   stats: Stats;
   script: SeasonScript;
   rng: Rng;
@@ -134,11 +179,23 @@ export interface GameState {
  * Player orders are measures aimed at the map, not unit micro: `dispatch`
  * without a truckId sends the closest available engine; with one, that engine.
  */
-export type Command = { type: 'dispatch'; x: number; y: number; truckId?: number };
+export type Command =
+  | { type: 'dispatch'; x: number; y: number; truckId?: number }
+  | { type: 'evacuate'; villageId: number }
+  | { type: 'bomberDrop'; x: number; y: number }
+  | { type: 'crewCut'; x: number; y: number; crewId?: number }
+  | { type: 'placeTower'; x: number; y: number };
 
 export type GameEvent =
   | { type: 'fireDetected'; x: number; y: number }
   | { type: 'engineDispatched'; truckId: number; x: number; y: number }
+  | { type: 'evacuationStarted'; villageId: number }
+  | { type: 'evacuationComplete'; villageId: number }
+  | { type: 'bomberDispatched'; bomberId: number }
+  | { type: 'bomberDrop'; x: number; y: number }
+  | { type: 'crewDispatched'; crewId: number }
+  | { type: 'towerPlaced'; x: number; y: number }
+  | { type: 'civilianDeaths'; count: number }
   | { type: 'reliefRain' }
   | { type: 'windShift' }
   | { type: 'seasonWindingDown' }

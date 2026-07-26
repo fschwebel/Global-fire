@@ -1,5 +1,5 @@
-import { truck as T } from './balance';
-import type { GameState, Point, Truck } from './state';
+import { bomber as B, crewUnit as CU, truck as T } from './balance';
+import type { GameEvent, GameState, Point, Truck } from './state';
 import { cellAt, idx, inActive } from './state';
 
 function moveCost(s: GameState, x: number, y: number): number {
@@ -213,6 +213,154 @@ export function updateTrucks(s: GameState): void {
 
     if (t.water < T.waterCapacity && adjacentToWaterOrStation(s, t)) {
       t.water = Math.min(T.waterCapacity, t.water + T.refillPerTick);
+    }
+  }
+}
+
+// --- Water bombers -----------------------------------------------------------
+
+/** Send the first ready bomber to drop on (x,y). Returns its id, or null. */
+export function dispatchBomber(s: GameState, x: number, y: number): number | null {
+  if (!inActive(s, x, y)) return null;
+  const b = s.bombers.find((bb) => bb.state === 'ready');
+  if (!b) return null;
+  b.state = 'outbound';
+  b.target = { x, y };
+  return b.id;
+}
+
+/** Straight-line flight toward (tx,ty); true once arrived. */
+function fly(b: { x: number; y: number }, tx: number, ty: number): boolean {
+  const dx = tx - b.x;
+  const dy = ty - b.y;
+  const d = Math.hypot(dx, dy);
+  if (d <= B.flySpeed) {
+    b.x = tx;
+    b.y = ty;
+    return true;
+  }
+  b.x += (dx / d) * B.flySpeed;
+  b.y += (dy / d) * B.flySpeed;
+  return false;
+}
+
+function releaseDrop(s: GameState, at: Point): void {
+  const r = Math.ceil(B.dropRadius);
+  for (let dy = -r; dy <= r; dy++)
+    for (let dx = -r; dx <= r; dx++) {
+      if (Math.hypot(dx, dy) > B.dropRadius + 0.01) continue;
+      const nx = at.x + dx;
+      const ny = at.y + dy;
+      if (!inActive(s, nx, ny)) continue;
+      const c = cellAt(s, nx, ny);
+      if (c.state === 'burning') {
+        c.intensity -= B.intensityDrop;
+        if (c.intensity <= 0) {
+          c.state = 'unburnt';
+          c.intensity = 0;
+          c.igniteAge = 0;
+          c.detected = false;
+        }
+      }
+      c.wetTimer = Math.max(c.wetTimer, B.dropWetTicks);
+    }
+}
+
+/** One tick of bomber behaviour: fly out, hold over the target, drop, fly home, reload. */
+export function updateBombers(s: GameState, events: GameEvent[]): void {
+  for (const b of s.bombers) {
+    b.px = b.x;
+    b.py = b.y;
+    switch (b.state) {
+      case 'outbound':
+        if (b.target && fly(b, b.target.x, b.target.y)) {
+          b.state = 'dropping';
+          b.phaseTicks = B.dropTicks;
+        }
+        break;
+      case 'dropping':
+        b.phaseTicks -= 1;
+        if (b.phaseTicks <= 0 && b.target) {
+          releaseDrop(s, b.target);
+          events.push({ type: 'bomberDrop', x: b.target.x, y: b.target.y });
+          b.target = null;
+          b.state = 'returning';
+        }
+        break;
+      case 'returning':
+        if (fly(b, s.station.x, s.station.y)) {
+          b.state = 'reloading';
+          b.phaseTicks = B.reloadTicks;
+        }
+        break;
+      case 'reloading':
+        b.phaseTicks -= 1;
+        if (b.phaseTicks <= 0) b.state = 'ready';
+        break;
+      case 'ready':
+        break;
+    }
+  }
+}
+
+// --- Fire crews --------------------------------------------------------------
+
+function cuttable(s: GameState, x: number, y: number): boolean {
+  const t = cellAt(s, x, y).type;
+  return t === 'grass' || t === 'sparse' || t === 'dense';
+}
+
+/** Queue a firebreak cut at (x,y) on a crew. Returns the crew's id, or null. */
+export function dispatchCrew(s: GameState, x: number, y: number, crewId?: number): number | null {
+  if (!inActive(s, x, y) || !cuttable(s, x, y)) return null;
+  const crew = crewId != null ? s.crews.find((c) => c.id === crewId) : s.crews[0];
+  if (!crew) return null;
+  if (crew.jobs.some((j) => j.x === x && j.y === y)) return crew.id;
+  crew.jobs.push({ x, y });
+  return crew.id;
+}
+
+/** One tick of crew behaviour: walk to the next queued tile, cut it into a firebreak. */
+export function updateCrews(s: GameState): void {
+  for (const crew of s.crews) {
+    crew.trail = [{ x: crew.x, y: crew.y }];
+    if (crew.path.length > 0) {
+      const speed = (T.moveSpeed[cellAt(s, crew.x, crew.y).type] || 0.75) * CU.speedFactor;
+      crew.movePoints += speed;
+      while (crew.movePoints >= 1 && crew.path.length > 0) {
+        const next = crew.path.shift()!;
+        crew.x = next.x;
+        crew.y = next.y;
+        crew.trail.push({ x: next.x, y: next.y });
+        crew.movePoints -= 1;
+      }
+      continue;
+    }
+    crew.movePoints = 0;
+
+    // Drop jobs the fire has already claimed (or that stopped being vegetation).
+    while (crew.jobs.length > 0) {
+      const job = crew.jobs[0]!;
+      if (cuttable(s, job.x, job.y) && cellAt(s, job.x, job.y).state === 'unburnt') break;
+      crew.jobs.shift();
+      crew.cutProgress = 0;
+    }
+    const job = crew.jobs[0];
+    if (!job) continue;
+
+    if (crew.x === job.x && crew.y === job.y) {
+      crew.cutProgress += 1;
+      if (crew.cutProgress >= CU.cutTicks) {
+        cellAt(s, job.x, job.y).type = 'firebreak'; // baseType keeps the old ground
+        crew.jobs.shift();
+        crew.cutProgress = 0;
+      }
+    } else {
+      crew.cutProgress = 0;
+      const path = findPath(s, { x: crew.x, y: crew.y }, job);
+      if (path.length === 0)
+        crew.jobs.shift(); // unreachable — skip it
+      else crew.path = path;
     }
   }
 }

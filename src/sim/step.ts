@@ -1,23 +1,81 @@
 import {
   detection,
+  evac,
   habitatPerTile,
   ignitionSchedule,
   rain,
   regrowth,
+  tower,
+  unlocks,
   windDriftPerTick,
 } from './balance';
 import { flammable, ignite, intensityCap, spreadProb } from './fire';
-import type { Command, GameEvent, GameState } from './state';
+import type { Command, GameEvent, GameState, Village } from './state';
 import { cellAt, idx, inActive } from './state';
-import { dispatchEngine, updateTrucks } from './units';
+import {
+  dispatchBomber,
+  dispatchCrew,
+  dispatchEngine,
+  updateBombers,
+  updateCrews,
+  updateTrucks,
+} from './units';
 
 function applyCommands(s: GameState, commands: Command[], events: GameEvent[]): void {
   for (const cmd of commands) {
-    if (cmd.type === 'dispatch') {
-      const id = dispatchEngine(s, cmd.x, cmd.y, cmd.truckId);
-      if (id !== null) events.push({ type: 'engineDispatched', truckId: id, x: cmd.x, y: cmd.y });
+    switch (cmd.type) {
+      case 'dispatch': {
+        const id = dispatchEngine(s, cmd.x, cmd.y, cmd.truckId);
+        if (id !== null) events.push({ type: 'engineDispatched', truckId: id, x: cmd.x, y: cmd.y });
+        break;
+      }
+      case 'evacuate': {
+        if (s.seasonYear < unlocks.evacuate) break;
+        const v = s.villages.find((vv) => vv.id === cmd.villageId);
+        if (v && v.evac === 'none') {
+          v.evac = 'inProgress';
+          v.evacStartTick = s.tick;
+          events.push({ type: 'evacuationStarted', villageId: v.id });
+        }
+        break;
+      }
+      case 'bomberDrop': {
+        const id = dispatchBomber(s, cmd.x, cmd.y);
+        if (id !== null) events.push({ type: 'bomberDispatched', bomberId: id });
+        break;
+      }
+      case 'crewCut': {
+        const id = dispatchCrew(s, cmd.x, cmd.y, cmd.crewId);
+        if (id !== null) events.push({ type: 'crewDispatched', crewId: id });
+        break;
+      }
+      case 'placeTower': {
+        if (
+          s.towersAvailable > 0 &&
+          inActive(s, cmd.x, cmd.y) &&
+          cellAt(s, cmd.x, cmd.y).type !== 'water' &&
+          cellAt(s, cmd.x, cmd.y).state !== 'burning'
+        ) {
+          s.towers.push({ x: cmd.x, y: cmd.y });
+          s.towersAvailable -= 1;
+          events.push({ type: 'towerPlaced', x: cmd.x, y: cmd.y });
+        }
+        break;
+      }
     }
   }
+}
+
+/** The village a house tile belongs to (houses grow within 3 tiles of the centre). */
+function villageAt(s: GameState, x: number, y: number): Village | null {
+  for (const v of s.villages) if (Math.max(Math.abs(v.x - x), Math.abs(v.y - y)) <= 4) return v;
+  return null;
+}
+
+function nearTower(s: GameState, x: number, y: number): boolean {
+  for (const t of s.towers)
+    if (Math.abs(t.x - x) <= tower.radius && Math.abs(t.y - y) <= tower.radius) return true;
+  return false;
 }
 
 function applyRainTick(s: GameState): void {
@@ -124,7 +182,8 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
     }
 
   // Burning cells: intensity builds, fuel depletes → burnt (+ stats, history).
-  for (const c of s.grid) {
+  for (let i = 0; i < s.grid.length; i++) {
+    const c = s.grid[i]!;
     if (c.state !== 'burning') continue;
     c.intensity = Math.min(intensityCap(c), c.intensity + 1);
     c.fuel -= 1;
@@ -137,6 +196,19 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
       s.stats.animalsKilled += habitatPerTile[c.type] ?? 0;
       if (c.type === 'house') {
         s.stats.housesLost += 1;
+        // Residents' fate depends on how far the evacuation got.
+        const v = villageAt(s, i % s.w, Math.floor(i / s.w));
+        const mortality =
+          v?.evac === 'done'
+            ? 0
+            : v?.evac === 'inProgress'
+              ? evac.mortalityEvacuating
+              : evac.mortalityNone;
+        const deaths = Math.round(c.occupants * mortality);
+        if (deaths > 0) {
+          s.stats.civiliansLost += deaths;
+          events.push({ type: 'civilianDeaths', count: deaths });
+        }
         c.occupants = 0;
         // Some homes are rebuilt years later (baseType stays 'house' as the
         // marker); the rest revert to grass — the village shrinks.
@@ -156,15 +228,29 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
   for (const c of s.grid) if (c.wetTimer > 0) c.wetTimer -= 1;
   if (s.rainTicks > 0) s.rainTicks -= 1;
 
-  updateTrucks(s);
+  // Evacuations run their course.
+  for (const v of s.villages) {
+    if (v.evac === 'inProgress' && s.tick - v.evacStartTick >= evac.durationTicks) {
+      v.evac = 'done';
+      events.push({ type: 'evacuationComplete', villageId: v.id });
+    }
+  }
 
-  // Detection: a fire is reported by age, by proximity call-in, or by spreading
-  // from an already-detected cell (handled at ignition).
+  updateTrucks(s);
+  updateBombers(s, events);
+  updateCrews(s);
+
+  // Detection: a fire is reported by age, by proximity call-in, by a watch
+  // tower, or by spreading from an already-detected cell (handled at ignition).
   for (let y = s.bounds.y0; y < s.bounds.y1; y++)
     for (let x = s.bounds.x0; x < s.bounds.x1; x++) {
       const c = s.grid[idx(s, x, y)]!;
       if (c.state !== 'burning' || c.detected) continue;
-      if (c.igniteAge >= detection.DETECT_DELAY || nearRoadHouseOrTruck(s, x, y)) {
+      if (
+        c.igniteAge >= detection.DETECT_DELAY ||
+        nearRoadHouseOrTruck(s, x, y) ||
+        nearTower(s, x, y)
+      ) {
         c.detected = true;
         let neighbourAlreadyDetected = false;
         for (let dy = -1; dy <= 1 && !neighbourAlreadyDetected; dy++)

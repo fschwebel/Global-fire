@@ -5,6 +5,8 @@ import {
   truck as T,
   seasons,
   sectorSizes,
+  tower,
+  unlocks,
 } from './balance';
 import { hash2, mulberry32 } from './rng';
 import type { Bounds, Cell, GameState, Point, SeasonScript, TileType } from './state';
@@ -325,6 +327,40 @@ function applyRegrowth(cell: Cell, year: number): void {
     cell.type = vegetation ? 'grass' : cell.baseType;
 }
 
+/**
+ * When the sector grows, the revealed ring must not meet the old edge as a
+ * ruler line: where fire burnt against the old boundary, a short, decaying
+ * spillover of burn history is stamped onto the new ring — the fire never
+ * respected the sector line, the player just couldn't see past it.
+ * An rng roll is drawn for every ring cell so a reloaded campaign stamps
+ * exactly the same cells as a played-through one.
+ */
+function blendSectorSeam(grid: Cell[], seed: number, seasonIndex: number, station: Point): void {
+  const oldB = boundsForSeason(seasonIndex - 1, station);
+  const newB = boundsForSeason(seasonIndex, station);
+  if (oldB.x0 === newB.x0 && oldB.y0 === newB.y0 && oldB.x1 === newB.x1 && oldB.y1 === newB.y1)
+    return;
+  const rng = mulberry32(seed ^ (0x5eaa + seasonIndex * 131));
+  const inOld = (x: number, y: number) =>
+    x >= oldB.x0 && x < oldB.x1 && y >= oldB.y0 && y < oldB.y1;
+  for (let y = newB.y0; y < newB.y1; y++)
+    for (let x = newB.x0; x < newB.x1; x++) {
+      if (inOld(x, y)) continue;
+      const roll = rng();
+      // Nearest cell just inside the old sector, and how far past the edge we are.
+      const cx = Math.min(Math.max(x, oldB.x0), oldB.x1 - 1);
+      const cy = Math.min(Math.max(y, oldB.y0), oldB.y1 - 1);
+      const dist = Math.max(Math.abs(x - cx), Math.abs(y - cy));
+      if (dist > 3) continue;
+      const source = grid[cy * M.W + cx]!;
+      if (source.burntYear <= 0) continue;
+      const cell = grid[y * M.W + x]!;
+      const vegetation = cell.type === 'grass' || cell.type === 'sparse' || cell.type === 'dense';
+      if (!vegetation || cell.burntYear > 0) continue;
+      if (roll < 0.95 - dist * 0.28) cell.burntYear = source.burntYear;
+    }
+}
+
 /** Authored season script: staggered ignitions in viable fuel, one wind shift, relief rain per curve. */
 function buildScript(s: GameState, seasonIndex: number, villages: Point[]): SeasonScript {
   const rng = mulberry32(s.seed ^ (0xbeef + seasonIndex));
@@ -434,8 +470,14 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
  * Create a season. seasonIndex 0 = 2026 … 9 = 2070. Pass the previous season's
  * grid as `carryGrid` to inherit the persistent world: scars regrow on a
  * real-years clock, permanent conversions stay, transient fire state resets.
+ * `carryTowers` keeps watch towers standing — they are structures, not units.
  */
-export function createSeason(seed: number, seasonIndex = 0, carryGrid?: Cell[]): GameState {
+export function createSeason(
+  seed: number,
+  seasonIndex = 0,
+  carryGrid?: Cell[],
+  carryTowers?: Point[],
+): GameState {
   const params = seasons[seasonIndex];
   if (!params) throw new Error(`no season ${seasonIndex}`);
   const { grid: freshGrid, station, villages } = generateMap(seed);
@@ -455,6 +497,7 @@ export function createSeason(seed: number, seasonIndex = 0, carryGrid?: Cell[]):
       detected: false,
     }));
   }
+  if (carryGrid && seasonIndex > 0) blendSectorSeam(grid, seed, seasonIndex, station);
   for (const cell of grid) applyRegrowth(cell, params.year);
 
   const state: GameState = {
@@ -485,6 +528,48 @@ export function createSeason(seed: number, seasonIndex = 0, carryGrid?: Cell[]):
       target: null,
       trail: [{ x: station.x, y: station.y }],
     })),
+    villages: villages.map((v, i) => ({
+      id: i + 1,
+      x: v.x,
+      y: v.y,
+      evac: 'none' as const,
+      evacStartTick: 0,
+    })),
+    bombers: (params.year >= unlocks.bomber2
+      ? [1, 2]
+      : params.year >= unlocks.bomber
+        ? [1]
+        : []
+    ).map((id) => ({
+      id,
+      x: station.x,
+      y: station.y,
+      px: station.x,
+      py: station.y,
+      state: 'ready' as const,
+      target: null,
+      phaseTicks: 0,
+    })),
+    crews:
+      params.year >= unlocks.crew
+        ? [
+            {
+              id: 1,
+              x: station.x,
+              y: station.y,
+              path: [],
+              movePoints: 0,
+              jobs: [],
+              cutProgress: 0,
+              trail: [{ x: station.x, y: station.y }],
+            },
+          ]
+        : [],
+    towers: (carryTowers ?? []).map((t) => ({ ...t })),
+    towersAvailable: Math.max(
+      0,
+      (params.year >= unlocks.towers ? tower.count : 0) - (carryTowers?.length ?? 0),
+    ),
     stats: {
       hectaresBurnt: 0,
       animalsKilled: 0,

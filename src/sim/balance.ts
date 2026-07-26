@@ -86,6 +86,49 @@ export const rain = {
   globalWetTicks: 20,
 };
 
+/** Season year each means arrives — free, "reassigned to your sector" (progression doc §3). */
+export const unlocks = {
+  evacuate: 2030,
+  bomber: 2035,
+  towers: 2040,
+  crew: 2050,
+  bomber2: 2055,
+};
+
+export const evac = {
+  /** Ticks for an ordered village to clear. */
+  durationTicks: 40,
+  /** Share of a burning home's occupants lost, by the village's evacuation state. */
+  mortalityNone: 0.3,
+  mortalityEvacuating: 0.1,
+};
+
+export const bomber = {
+  /** Tiles per tick, straight-line flight over any terrain. */
+  flySpeed: 1.8,
+  /** Euclidean radius of the drop footprint. */
+  dropRadius: 2,
+  intensityDrop: 12,
+  dropWetTicks: 50,
+  /** Ticks spent over the target releasing the load (renders the water sheet). */
+  dropTicks: 2,
+  reloadTicks: 25,
+};
+
+export const tower = {
+  /** Towers granted at the unlock season; placement is the player's call. */
+  count: 2,
+  /** Chebyshev detection radius: fires inside are reported almost instantly. */
+  radius: 8,
+};
+
+export const crewUnit = {
+  /** Crews travel on foot: fraction of engine speed. */
+  speedFactor: 0.7,
+  /** Ticks to cut one vegetation tile into a firebreak. */
+  cutTicks: 3,
+};
+
 export const habitatPerTile = { dense: 3, sparse: 2, grass: 1 } as Partial<
   Record<TileType, number>
 >;

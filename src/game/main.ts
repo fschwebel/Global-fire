@@ -1,7 +1,7 @@
 import { Renderer, TILE } from '../render/canvas';
 import { createSeason } from '../sim/scenario';
 import type { Cell, GameState, Stats } from '../sim/state';
-import { Hud } from '../ui/hud';
+import { Hud, type Tool } from '../ui/hud';
 import { MapViewport } from '../ui/viewport';
 import { GameLoop } from './loop';
 import { clearCampaign, loadCampaign, saveCampaign } from './save';
@@ -67,7 +67,7 @@ function bootState(): GameState {
         // regrowth clock re-populates any lot that has since been rebuilt.
         if (cell.type === 'house') cell.occupants = 0;
       }
-      return createSeason(CAMPAIGN_SEED, seasonIndex, pristine.grid);
+      return createSeason(CAMPAIGN_SEED, seasonIndex, pristine.grid, saved.towers);
     } catch {
       clearCampaign(); // a damaged save must never brick the boot
     }
@@ -80,13 +80,23 @@ function bootState(): GameState {
 let state = bootState();
 let pinnedTruckId: number | null = null;
 
+/** The armed measure: what the next map click means. */
+let armedTool: Tool = 'engine';
+
+function setTool(tool: Tool): void {
+  armedTool = tool;
+  if (tool !== 'engine') pinnedTruckId = null;
+  hud.setTool(tool);
+}
+
 function togglePin(truckId: number): void {
   pinnedTruckId = pinnedTruckId === truckId ? null : truckId;
+  if (pinnedTruckId !== null) setTool('engine');
 }
 
 const canvas = document.getElementById('map') as HTMLCanvasElement;
 const renderer = new Renderer(canvas, state);
-const hud = new Hud(state, togglePin);
+const hud = new Hud(state, togglePin, setTool);
 const viewport = new MapViewport(
   document.getElementById('mapwrap') as HTMLElement,
   canvas,
@@ -111,14 +121,15 @@ function sectorGrew(idx: number): boolean {
   return idx > 0 && Math.floor(idx / 2) > Math.floor((idx - 1) / 2);
 }
 
-function startSeason(idx: number, carryGrid?: Cell[]): void {
+function startSeason(idx: number, carryGrid?: Cell[], carryTowers?: typeof state.towers): void {
   seasonIndex = idx;
-  state = createSeason(CAMPAIGN_SEED, idx, carryGrid);
+  state = createSeason(CAMPAIGN_SEED, idx, carryGrid, carryTowers);
   pinnedTruckId = null;
   renderer.setState(state);
   hud.setState(state);
   loop.setState(state);
   viewport.setBase(canvas.width, canvas.height);
+  setTool('engine');
   setSpeed(0);
   hud.showBriefing(sectorGrew(idx));
 }
@@ -128,7 +139,8 @@ function onSeasonEnd(report: Stats): void {
   debriefIsFinal = seasonIndex >= LAST_SEASON;
   // The final save is cleared only when the player leaves the final screen —
   // a refresh at the 2070 debrief resumes the finale instead of losing the run.
-  if (!debriefIsFinal) saveCampaign(CAMPAIGN_SEED, seasonIndex + 1, campaign, state.grid);
+  if (!debriefIsFinal)
+    saveCampaign(CAMPAIGN_SEED, seasonIndex + 1, campaign, state.grid, state.towers);
   hud.showDebrief(report, campaign, state.seasonYear, debriefIsFinal);
 }
 
@@ -141,7 +153,10 @@ function overlayJustClosed(): boolean {
   return performance.now() - overlayClosedAt < 350;
 }
 
-canvas.addEventListener('click', (ev) => {
+// Click orders listen on the container: the viewport's pointer capture makes
+// Chrome retarget clicks to #mapwrap, so a canvas listener would never fire.
+const mapwrap = document.getElementById('mapwrap') as HTMLElement;
+mapwrap.addEventListener('click', (ev) => {
   if (viewport.consumeDragged()) return; // a pan/pinch, not an order
   if (hud.overlayVisible() || overlayJustClosed()) return;
   const rect = canvas.getBoundingClientRect();
@@ -152,22 +167,51 @@ canvas.addEventListener('click', (ev) => {
   if (x < state.bounds.x0 || y < state.bounds.y0 || x >= state.bounds.x1 || y >= state.bounds.y1)
     return;
 
-  // Clicking an engine on the map pins it — same as its sidebar card. The
-  // hit-test includes the tiles the engine just drove through, because the
-  // sprite renders interpolated along that trail.
-  const truck = state.trucks.find(
-    (t) => (t.x === x && t.y === y) || t.trail.some((p) => p.x === x && p.y === y),
-  );
-  if (truck) {
-    togglePin(truck.id);
-    return;
+  switch (armedTool) {
+    case 'engine': {
+      // Clicking an engine on the map pins it — same as its sidebar card. The
+      // hit-test includes the tiles the engine just drove through, because the
+      // sprite renders interpolated along that trail.
+      const truck = state.trucks.find(
+        (t) => (t.x === x && t.y === y) || t.trail.some((p) => p.x === x && p.y === y),
+      );
+      if (truck) {
+        togglePin(truck.id);
+        return;
+      }
+      loop.enqueue({ type: 'dispatch', x, y, truckId: pinnedTruckId ?? undefined });
+      break;
+    }
+    case 'evac': {
+      // The click names a village, not a tile.
+      let best: { id: number; d: number } | null = null;
+      for (const v of state.villages) {
+        const d = Math.max(Math.abs(v.x - x), Math.abs(v.y - y));
+        if (d <= 6 && (best === null || d < best.d)) best = { id: v.id, d };
+      }
+      if (best) {
+        loop.enqueue({ type: 'evacuate', villageId: best.id });
+        setTool('engine');
+      }
+      break;
+    }
+    case 'bomber':
+      loop.enqueue({ type: 'bomberDrop', x, y });
+      break;
+    case 'tower':
+      loop.enqueue({ type: 'placeTower', x, y });
+      if (state.towersAvailable <= 1) setTool('engine');
+      break;
+    case 'crew':
+      loop.enqueue({ type: 'crewCut', x, y });
+      break;
   }
-  loop.enqueue({ type: 'dispatch', x, y, truckId: pinnedTruckId ?? undefined });
 });
 
-canvas.addEventListener('contextmenu', (ev) => {
+mapwrap.addEventListener('contextmenu', (ev) => {
   ev.preventDefault();
   pinnedTruckId = null;
+  setTool('engine');
 });
 
 // --- Time controls ---------------------------------------------------------
@@ -189,7 +233,10 @@ document.addEventListener('keydown', (ev) => {
   if (ev.key === ' ') {
     ev.preventDefault();
     setSpeed(loop.speed === 0 ? 1 : 0);
-  } else if (ev.key === 'Escape') pinnedTruckId = null;
+  } else if (ev.key === 'Escape') {
+    pinnedTruckId = null;
+    setTool('engine');
+  }
 });
 
 document.addEventListener('visibilitychange', () => {
@@ -214,7 +261,7 @@ document.addEventListener('visibilitychange', () => {
     debriefIsFinal = false;
     startSeason(0);
   } else {
-    startSeason(seasonIndex + 1, state.grid);
+    startSeason(seasonIndex + 1, state.grid, state.towers);
   }
 });
 

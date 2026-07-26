@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seasons } from '../src/sim/balance';
+import { detection, evac, seasons } from '../src/sim/balance';
 import { createSeason } from '../src/sim/scenario';
 import type { Cell, Command, GameState } from '../src/sim/state';
 import { step } from '../src/sim/step';
@@ -481,6 +481,12 @@ describe('stat reveals', () => {
     expect(statLine(stats, 2026)).toBe('120 ha');
     expect(statLine(stats, 2030)).toBe('120 ha · ~300 animals');
     expect(statLine(stats, 2035)).toBe('120 ha · ~300 animals · 4 homes');
+    expect(statLine(stats, 2040)).toBe('120 ha · ~300 animals · 4 homes');
+    // The firefighter counter is revealed at zero — the counter is the warning.
+    expect(statLine(stats, 2045)).toBe('120 ha · ~300 animals · 4 homes · 0 firefighters');
+    expect(statLine(stats, 2050)).toBe(
+      '120 ha · ~300 animals · 4 homes · 0 firefighters · 0 people',
+    );
     expect(statLine(stats, 2070)).toContain('4 homes');
   });
 });
@@ -503,13 +509,14 @@ describe('campaign save', () => {
     const scarsBefore = s.grid.filter((c) => c.burntYear > 0).length;
     expect(scarsBefore).toBeGreaterThan(0);
 
-    saveCampaign(42, 1, s.stats, s.grid);
+    saveCampaign(42, 1, s.stats, s.grid, [{ x: 10, y: 10 }]);
     const loaded = loadCampaign();
     expect(loaded).not.toBeNull();
     expect(loaded!.seed).toBe(42);
     expect(loaded!.seasonIndex).toBe(1);
     expect(loaded!.campaign).toEqual(s.stats);
     expect(loaded!.scars.length).toBe(scarsBefore);
+    expect(loaded!.towers).toEqual([{ x: 10, y: 10 }]);
 
     clearCampaign();
     expect(loadCampaign()).toBeNull();
@@ -547,5 +554,215 @@ describe('dispatch (measure-based orders)', () => {
     s.trucks[0]!.water = 0;
     const target = { x: Math.min(s.w - 2, s.trucks[0]!.x + 5), y: s.trucks[0]!.y };
     expect(dispatchedId(s, { type: 'dispatch', x: target.x, y: target.y })).toBe(2);
+  });
+});
+
+describe('unlockable means', () => {
+  /** A house tile of the given village, with residents. */
+  function villageHouse(s: GameState, villageId: number): { cell: Cell; x: number; y: number } {
+    const v = s.villages.find((vv) => vv.id === villageId)!;
+    for (let dy = -4; dy <= 4; dy++)
+      for (let dx = -4; dx <= 4; dx++) {
+        const x = v.x + dx;
+        const y = v.y + dy;
+        const cell = s.grid[y * s.w + x];
+        if (cell && cell.type === 'house' && cell.occupants > 0) return { cell, x, y };
+      }
+    throw new Error(`village ${villageId} has no populated houses`);
+  }
+
+  it('means arrive on the canon schedule: 2035 bomber, 2040 towers, 2050 crew, 2055 bomber 2', () => {
+    expect(createSeason(42, 0).bombers.length).toBe(0);
+    expect(createSeason(42, 0).crews.length).toBe(0);
+    expect(createSeason(42, 0).towersAvailable).toBe(0);
+    expect(createSeason(42, 2).bombers.length).toBe(1);
+    expect(createSeason(42, 3).towersAvailable).toBe(2);
+    expect(createSeason(42, 5).crews.length).toBe(1);
+    expect(createSeason(42, 6).bombers.length).toBe(2);
+  });
+
+  it('evacuation orders are refused before their unlock season', () => {
+    const s = createSeason(42, 0); // 2026
+    const events = step(s, [{ type: 'evacuate', villageId: 1 }]);
+    expect(events.some((e) => e.type === 'evacuationStarted')).toBe(false);
+    expect(s.villages[0]!.evac).toBe('none');
+  });
+
+  it('an evacuated village loses no residents when its homes burn', () => {
+    const s = createSeason(42, 1); // 2030
+    const events = step(s, [{ type: 'evacuate', villageId: 1 }]);
+    expect(events.some((e) => e.type === 'evacuationStarted')).toBe(true);
+    expect(s.villages[0]!.evac).toBe('inProgress');
+    let done = false;
+    for (let i = 0; i < evac.durationTicks + 5 && !done; i++)
+      done = step(s).some((e) => e.type === 'evacuationComplete');
+    expect(done).toBe(true);
+    expect(s.villages[0]!.evac).toBe('done');
+
+    const before = s.stats.civiliansLost;
+    const h = villageHouse(s, 1);
+    h.cell.state = 'burning';
+    h.cell.fuel = 1;
+    h.cell.intensity = 5;
+    step(s);
+    expect(h.cell.state).toBe('burnt');
+    expect(s.stats.civiliansLost).toBe(before);
+  });
+
+  it('an unevacuated burning home costs lives', () => {
+    const s = createSeason(42, 1); // 2030
+    const h = villageHouse(s, 1);
+    const expected = Math.round(h.cell.occupants * evac.mortalityNone);
+    expect(expected).toBeGreaterThan(0);
+    h.cell.state = 'burning';
+    h.cell.fuel = 1;
+    h.cell.intensity = 5;
+    const events = step(s);
+    expect(h.cell.state).toBe('burnt');
+    expect(s.stats.civiliansLost).toBe(expected);
+    expect(events.some((e) => e.type === 'civilianDeaths' && e.count === expected)).toBe(true);
+  });
+
+  it('a water bomber flies out, drops on target, and cycles back to ready', () => {
+    const s = createSeason(42, 2); // 2035
+    // A burning patch away from the station.
+    const tx = s.bounds.x0 + 8;
+    const ty = s.bounds.y0 + 8;
+    let target: { x: number; y: number } | null = null;
+    outer: for (let dy = 0; dy < 10; dy++)
+      for (let dx = 0; dx < 10; dx++) {
+        const c = s.grid[(ty + dy) * s.w + (tx + dx)]!;
+        if (c.type === 'grass' || c.type === 'sparse' || c.type === 'dense') {
+          target = { x: tx + dx, y: ty + dy };
+          break outer;
+        }
+      }
+    expect(target).not.toBeNull();
+    const cell = s.grid[target!.y * s.w + target!.x]!;
+    cell.state = 'burning';
+    cell.intensity = 6;
+    cell.fuel = 60;
+
+    const events = step(s, [{ type: 'bomberDrop', x: target!.x, y: target!.y }]);
+    expect(events.some((e) => e.type === 'bomberDispatched')).toBe(true);
+    let dropped = false;
+    for (let i = 0; i < 60 && !dropped; i++) dropped = step(s).some((e) => e.type === 'bomberDrop');
+    expect(dropped).toBe(true);
+    expect(cell.state).not.toBe('burning');
+    expect(cell.wetTimer).toBeGreaterThan(0);
+
+    for (let i = 0; i < 80 && s.bombers[0]!.state !== 'ready'; i++) step(s);
+    expect(s.bombers[0]!.state).toBe('ready');
+  });
+
+  it('a watch tower reports fires in its radius almost instantly', () => {
+    const s = createSeason(42, 3); // 2040
+    // A fuel tile no road, house, or engine would call in.
+    let remote: { x: number; y: number } | null = null;
+    const r = detection.CALL_IN_RADIUS;
+    outer: for (let y = s.bounds.y0 + 2; y < s.bounds.y1 - 2; y++)
+      for (let x = s.bounds.x0 + 2; x < s.bounds.x1 - 2; x++) {
+        const c = s.grid[y * s.w + x]!;
+        if (c.type !== 'grass' && c.type !== 'sparse' && c.type !== 'dense') continue;
+        let calledIn = false;
+        for (let dy = -r; dy <= r && !calledIn; dy++)
+          for (let dx = -r; dx <= r; dx++) {
+            const n = s.grid[(y + dy) * s.w + (x + dx)];
+            if (n && (n.type === 'road' || n.type === 'house')) {
+              calledIn = true;
+              break;
+            }
+          }
+        for (const t of s.trucks)
+          if (Math.abs(t.x - x) <= r && Math.abs(t.y - y) <= r) calledIn = true;
+        if (!calledIn) {
+          remote = { x, y };
+          break outer;
+        }
+      }
+    expect(remote).not.toBeNull();
+
+    // Without a tower: a young fire there goes unreported.
+    const cell = s.grid[remote!.y * s.w + remote!.x]!;
+    cell.state = 'burning';
+    cell.intensity = 2;
+    cell.fuel = 60;
+    cell.detected = false;
+    step(s);
+    expect(cell.detected).toBe(false);
+
+    // With a tower beside it: reported on the next tick.
+    const placed = step(s, [{ type: 'placeTower', x: remote!.x + 1, y: remote!.y }]);
+    expect(placed.some((e) => e.type === 'towerPlaced')).toBe(true);
+    expect(s.towers.length).toBe(1);
+    expect(s.towersAvailable).toBe(1);
+    step(s);
+    expect(cell.detected).toBe(true);
+  });
+
+  it('a fire crew walks out and cuts clicked tiles into a firebreak', () => {
+    const s = createSeason(42, 5); // 2050
+    let target: { x: number; y: number } | null = null;
+    outer: for (let ring = 2; ring < 10 && !target; ring++)
+      for (let dy = -ring; dy <= ring; dy++)
+        for (let dx = -ring; dx <= ring; dx++) {
+          const x = s.station.x + dx;
+          const y = s.station.y + dy;
+          if (x < s.bounds.x0 || y < s.bounds.y0 || x >= s.bounds.x1 || y >= s.bounds.y1) continue;
+          const c = s.grid[y * s.w + x]!;
+          if (c.type === 'grass' || c.type === 'sparse') {
+            target = { x, y };
+            break outer;
+          }
+        }
+    expect(target).not.toBeNull();
+
+    const events = step(s, [{ type: 'crewCut', x: target!.x, y: target!.y }]);
+    expect(events.some((e) => e.type === 'crewDispatched')).toBe(true);
+    for (let i = 0; i < 60 && s.grid[target!.y * s.w + target!.x]!.type !== 'firebreak'; i++)
+      step(s);
+    expect(s.grid[target!.y * s.w + target!.x]!.type).toBe('firebreak');
+  });
+});
+
+describe('sector seam', () => {
+  /** A 2030 world with a burnt strip pressed against the east sector edge. */
+  function burntEdgeWorld(): GameState {
+    const s = createSeason(42, 1);
+    const b = s.bounds;
+    for (let y = b.y0 + 5; y < b.y1 - 5; y++)
+      for (let x = b.x1 - 3; x < b.x1; x++) {
+        const c = s.grid[y * s.w + x]!;
+        if (c.type === 'grass' || c.type === 'sparse' || c.type === 'dense') {
+          c.state = 'burnt';
+          c.burntYear = 2030;
+        }
+      }
+    return s;
+  }
+
+  it('growth reveals a ragged fire edge, not a ruler line', () => {
+    const before = burntEdgeWorld();
+    const oldX1 = before.bounds.x1;
+    const grown = createSeason(42, 2, before.grid); // 2035: the sector widens
+    expect(grown.bounds.x1).toBeGreaterThan(oldX1);
+
+    let spill = 0;
+    let deep = 0;
+    for (let y = grown.bounds.y0; y < grown.bounds.y1; y++)
+      for (let x = oldX1; x < grown.bounds.x1; x++) {
+        if (grown.grid[y * grown.w + x]!.burntYear > 0) {
+          if (x - oldX1 < 3) spill++;
+          else deep++;
+        }
+      }
+    expect(spill).toBeGreaterThan(0); // the scar bleeds past the old boundary
+    expect(deep).toBe(0); // but only a few tiles deep
+  });
+
+  it('seam spillover is deterministic: a reloaded campaign stamps the same cells', () => {
+    const a = createSeason(42, 2, burntEdgeWorld().grid);
+    const b = createSeason(42, 2, burntEdgeWorld().grid);
+    expect(a.grid.map((c) => c.burntYear).join()).toBe(b.grid.map((c) => c.burntYear).join());
   });
 });
