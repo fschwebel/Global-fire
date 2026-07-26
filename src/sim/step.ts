@@ -38,6 +38,7 @@ function applyCommands(s: GameState, commands: Command[], events: GameEvent[]): 
         if (v && v.evac === 'none') {
           v.evac = 'inProgress';
           v.evacStartTick = s.tick;
+          s.terrainVersion += 1; // the village's houses repaint as leaving
           events.push({ type: 'evacuationStarted', villageId: v.id });
         }
         break;
@@ -251,6 +252,7 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
   for (const v of s.villages) {
     if (v.evac === 'inProgress' && s.tick - v.evacStartTick >= evac.durationTicks) {
       v.evac = 'done';
+      s.terrainVersion += 1; // the houses repaint as cleared and shuttered
       events.push({ type: 'evacuationComplete', villageId: v.id });
     }
   }

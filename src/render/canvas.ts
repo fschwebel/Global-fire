@@ -1,4 +1,4 @@
-import { regrowth as RG, truck as T, tower as TW } from '../sim/balance';
+import { development as DEV, regrowth as RG, truck as T, tower as TW } from '../sim/balance';
 import { hash2 } from '../sim/rng';
 import type { GameState, TileType } from '../sim/state';
 import { idx } from '../sim/state';
@@ -172,8 +172,34 @@ export class Renderer {
           }
         }
         if (c.type === 'house') {
-          tctx.fillStyle = '#8a5a2b';
-          tctx.fillRect(px + 3, py + 3, TILE - 6, TILE - 10);
+          // Evacuation must read on the houses themselves: amber-lit while the
+          // village moves out, dark and shuttered once it is clear.
+          const vill = s.villages.find(
+            (v) => Math.max(Math.abs(v.x - x), Math.abs(v.y - y)) <= DEV.maxRing,
+          );
+          const evac = vill?.evac ?? 'none';
+          if (evac === 'done') {
+            tctx.fillStyle = '#9c8a72';
+            tctx.fillRect(px, py, TILE, TILE);
+            tctx.fillStyle = '#3a342c';
+            tctx.fillRect(px + 3, py + 3, TILE - 6, TILE - 10);
+            tctx.strokeStyle = '#6e6455';
+            tctx.lineWidth = 1.5;
+            tctx.beginPath();
+            tctx.moveTo(px + 4, py + 4);
+            tctx.lineTo(px + TILE - 4, py + TILE - 8);
+            tctx.moveTo(px + TILE - 4, py + 4);
+            tctx.lineTo(px + 4, py + TILE - 8);
+            tctx.stroke();
+          } else if (evac === 'inProgress') {
+            tctx.fillStyle = '#e0a020';
+            tctx.fillRect(px + 3, py + 3, TILE - 6, TILE - 10);
+            tctx.fillStyle = '#8a5a2b';
+            tctx.fillRect(px + 5, py + 5, TILE - 10, TILE - 14);
+          } else {
+            tctx.fillStyle = '#8a5a2b';
+            tctx.fillRect(px + 3, py + 3, TILE - 6, TILE - 10);
+          }
         }
         // Old burn scars: ash-grey shadow that fades over the years.
         if (c.burntYear > 0 && s.seasonYear - c.burntYear <= RG.scarVisibleYears) {

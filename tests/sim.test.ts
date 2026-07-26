@@ -616,11 +616,14 @@ describe('unlockable means', () => {
     const events = step(s, [{ type: 'evacuate', villageId: 1 }]);
     expect(events.some((e) => e.type === 'evacuationStarted')).toBe(true);
     expect(s.villages[0]!.evac).toBe('inProgress');
+    const repaintOnStart = s.terrainVersion;
+    expect(repaintOnStart).toBeGreaterThan(0); // the houses repaint as leaving
     let done = false;
     for (let i = 0; i < evac.durationTicks + 5 && !done; i++)
       done = step(s).some((e) => e.type === 'evacuationComplete');
     expect(done).toBe(true);
     expect(s.villages[0]!.evac).toBe('done');
+    expect(s.terrainVersion).toBeGreaterThan(repaintOnStart); // and again once clear
 
     const before = s.stats.civiliansLost;
     const h = villageHouse(s, 1);
