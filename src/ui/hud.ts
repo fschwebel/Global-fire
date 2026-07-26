@@ -307,8 +307,10 @@ export class Hud {
 
   handle(events: GameEvent[]): void {
     // A village collapsing in one tick must not flood the stack: one line, summed.
+    // Silent before the people counter's reveal season — the loss is recorded,
+    // but the game only speaks of it once the counter exists.
     const deaths = events.reduce((n, e) => (e.type === 'civilianDeaths' ? n + e.count : n), 0);
-    if (deaths > 0)
+    if (deaths > 0 && this.state.seasonYear >= reveals.civilians)
       this.pushAlert(
         deaths === 1 ? '1 resident did not escape.' : `${deaths} residents did not escape.`,
       );
