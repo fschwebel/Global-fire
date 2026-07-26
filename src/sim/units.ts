@@ -1,10 +1,13 @@
-import { bomber as B, crewUnit as CU, truck as T } from './balance';
-import type { GameEvent, GameState, Point, Truck } from './state';
+import { bomber as B, crewUnit as CU, danger as D, truck as T } from './balance';
+import type { Crew, GameEvent, GameState, Point, Truck } from './state';
 import { cellAt, idx, inActive } from './state';
 
 function moveCost(s: GameState, x: number, y: number): number {
-  const speed = T.moveSpeed[cellAt(s, x, y).type];
-  return speed > 0 ? 1 / speed : Number.POSITIVE_INFINITY;
+  const cell = cellAt(s, x, y);
+  const speed = T.moveSpeed[cell.type];
+  if (speed <= 0) return Number.POSITIVE_INFINITY;
+  // Rigs don't drive through flame walls unless there is no other way.
+  return cell.state === 'burning' ? 25 / speed : 1 / speed;
 }
 
 /** A* over the move-cost grid. Returns the path excluding start, or [] if unreachable. */
@@ -355,11 +358,25 @@ function cuttable(s: GameState, x: number, y: number): boolean {
   return t === 'grass' || t === 'sparse' || t === 'dense';
 }
 
-/** Queue a firebreak cut at (x,y) on a crew. Returns the crew's id, or null. */
+/**
+ * Queue a firebreak cut at (x,y) on a crew. A non-vegetation but passable
+ * target is a move order instead — it clears the queue and walks the crew
+ * there (the way to pull a crew out of danger). Returns the crew's id, or null.
+ */
 export function dispatchCrew(s: GameState, x: number, y: number, crewId?: number): number | null {
-  if (!inActive(s, x, y) || !cuttable(s, x, y)) return null;
+  if (!inActive(s, x, y)) return null;
   const crew = crewId != null ? s.crews.find((c) => c.id === crewId) : s.crews[0];
   if (!crew) return null;
+  if (!cuttable(s, x, y)) {
+    const speed = T.moveSpeed[cellAt(s, x, y).type];
+    if (speed <= 0) return null;
+    const path = findPath(s, { x: crew.x, y: crew.y }, { x, y });
+    if (path.length === 0 && !(crew.x === x && crew.y === y)) return null;
+    crew.jobs = [];
+    crew.cutProgress = 0;
+    crew.path = path;
+    return crew.id;
+  }
   if (crew.jobs.some((j) => j.x === x && j.y === y)) return crew.id;
   crew.jobs.push({ x, y });
   return crew.id;
@@ -409,4 +426,103 @@ export function updateCrews(s: GameState): void {
       else crew.path = path;
     }
   }
+}
+
+// --- Firefighter danger rule -------------------------------------------------
+
+function inDanger(s: GameState, u: { x: number; y: number }): boolean {
+  if (cellAt(s, u.x, u.y).state === 'burning') return true;
+  let heavy = 0;
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = u.x + dx;
+      const ny = u.y + dy;
+      if (!inActive(s, nx, ny)) continue;
+      const c = cellAt(s, nx, ny);
+      if (c.state === 'burning' && c.intensity >= D.intensityThreshold) heavy++;
+    }
+  return heavy >= D.neighbors;
+}
+
+/** A tile is safe when it is not burning and no Moore neighbour burns. */
+function isSafeTile(s: GameState, x: number, y: number): boolean {
+  if (cellAt(s, x, y).state === 'burning') return false;
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = x + dx;
+      const ny = y + dy;
+      if (inActive(s, nx, ny) && cellAt(s, nx, ny).state === 'burning') return false;
+    }
+  return true;
+}
+
+/**
+ * True when no safe tile is reachable without crossing fire — a BFS over
+ * passable, non-burning ground within the escape radius. The unit's own tile
+ * is exempt from the non-burning requirement (they can run off it).
+ */
+function trapped(s: GameState, u: { x: number; y: number }): boolean {
+  const seen = new Set<number>();
+  const queue: Point[] = [{ x: u.x, y: u.y }];
+  seen.add(idx(s, u.x, u.y));
+  while (queue.length > 0) {
+    const p = queue.shift()!;
+    if (isSafeTile(s, p.x, p.y)) return false;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = p.x + dx;
+        const ny = p.y + dy;
+        if (!inActive(s, nx, ny)) continue;
+        if (Math.max(Math.abs(nx - u.x), Math.abs(ny - u.y)) > D.escapeRadius) continue;
+        const i = idx(s, nx, ny);
+        if (seen.has(i)) continue;
+        const c = cellAt(s, nx, ny);
+        if (c.state === 'burning' || T.moveSpeed[c.type] <= 0) continue;
+        seen.add(i);
+        queue.push({ x: nx, y: ny });
+      }
+  }
+  return true;
+}
+
+function dangerSweep(
+  s: GameState,
+  units: (Truck | Crew)[],
+  kind: 'engine' | 'crew',
+  crewSize: number,
+  events: GameEvent[],
+): void {
+  const lost: number[] = [];
+  for (const u of units) {
+    if (!inDanger(s, u)) {
+      u.dangerTicks = 0;
+      continue;
+    }
+    u.dangerTicks += 1;
+    if (u.dangerTicks === D.graceTicks)
+      events.push({ type: 'crewDanger', unit: kind, unitId: u.id });
+    if (u.dangerTicks >= D.graceTicks && trapped(s, u)) {
+      lost.push(u.id);
+      s.stats.firefightersLost += crewSize;
+      events.push({ type: 'unitLost', unit: kind, unitId: u.id, firefighters: crewSize });
+    }
+  }
+  for (const id of lost) {
+    const at = units.findIndex((u) => u.id === id);
+    if (at >= 0) units.splice(at, 1);
+  }
+}
+
+/**
+ * The danger rule (gameplay doc §4.2), active from its reveal season. No
+ * auto-retreat: the radio warning is the cue, and a crew is lost only when
+ * genuinely trapped. Lost units are rebuilt the following season.
+ */
+export function applyDangerRule(s: GameState, events: GameEvent[]): void {
+  if (s.seasonYear < D.from) return;
+  dangerSweep(s, s.trucks, 'engine', T.crew, events);
+  dangerSweep(s, s.crews, 'crew', CU.crew, events);
 }

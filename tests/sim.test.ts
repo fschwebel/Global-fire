@@ -790,3 +790,148 @@ describe('sector seam', () => {
     expect(a.grid.map((c) => c.burntYear).join()).toBe(b.grid.map((c) => c.burntYear).join());
   });
 });
+
+describe('firefighter danger rule', () => {
+  /** Ring the unit with heavy fire out to the given radius (skipping unburnable tiles). */
+  function encircle(s: GameState, x: number, y: number, radius: number): void {
+    for (let dy = -radius; dy <= radius; dy++)
+      for (let dx = -radius; dx <= radius; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < s.bounds.x0 || ny < s.bounds.y0 || nx >= s.bounds.x1 || ny >= s.bounds.y1)
+          continue;
+        const c = s.grid[ny * s.w + nx]!;
+        if (c.type === 'water' || c.type === 'rock') continue;
+        c.state = 'burning';
+        c.intensity = 8;
+        c.fuel = 80;
+      }
+  }
+
+  /** A spot away from the sector edge so the fire ring fits around it. */
+  function stage(s: GameState): { x: number; y: number } {
+    return { x: s.bounds.x0 + 12, y: s.bounds.y0 + 12 };
+  }
+
+  it('a trapped engine is overrun after the grace: firefighters die, the engine is gone', () => {
+    const s = createSeason(42, 4); // 2045 — the rule activates
+    const at = stage(s);
+    const t = s.trucks[0]!;
+    t.x = at.x;
+    t.y = at.y;
+    t.water = 0; // no fighting back — this is an entrapment
+    encircle(s, at.x, at.y, 3);
+
+    let warned = false;
+    let lostEvent: { firefighters: number } | null = null;
+    for (let i = 0; i < 10 && !lostEvent; i++) {
+      for (const ev of step(s)) {
+        if (ev.type === 'crewDanger' && ev.unit === 'engine') warned = true;
+        if (ev.type === 'unitLost' && ev.unit === 'engine')
+          lostEvent = { firefighters: ev.firefighters };
+      }
+    }
+    expect(warned).toBe(true);
+    expect(lostEvent).not.toBeNull();
+    expect(lostEvent!.firefighters).toBe(4);
+    expect(s.stats.firefightersLost).toBe(4);
+    expect(s.trucks.find((tr) => tr.id === t.id)).toBeUndefined();
+
+    // The department rebuilds the unit for the following season.
+    const next = createSeason(42, 5, s.grid, s.towers);
+    expect(next.trucks.length).toBe(2);
+  });
+
+  it('an engine in danger with an open escape survives (warning only)', () => {
+    const s = createSeason(42, 4); // 2045
+    const at = stage(s);
+    const t = s.trucks[0]!;
+    t.x = at.x;
+    t.y = at.y;
+    t.water = 0;
+    // Heavy fire on one side only — the other side stays open.
+    const arc = new Set<number>();
+    for (const [dx, dy] of [
+      [-1, -1],
+      [0, -1],
+      [1, -1],
+      [-1, 0],
+    ] as const) {
+      const c = s.grid[(at.y + dy) * s.w + (at.x + dx)]!;
+      if (c.type === 'water' || c.type === 'rock') continue;
+      c.state = 'burning';
+      c.intensity = 8;
+      c.fuel = 80;
+      arc.add((at.y + dy) * s.w + (at.x + dx));
+    }
+    let warned = false;
+    let lost = false;
+    for (let i = 0; i < 8; i++) {
+      for (const ev of step(s)) {
+        if (ev.type === 'crewDanger') warned = true;
+        if (ev.type === 'unitLost') lost = true;
+      }
+      // Freeze the scenario: the arc keeps burning, spread is snuffed — the
+      // escape route genuinely stays open for the whole test.
+      s.grid.forEach((c, ci) => {
+        if (arc.has(ci)) {
+          c.state = 'burning';
+          c.intensity = 8;
+          c.fuel = 80;
+        } else if (c.state === 'burning') {
+          c.state = 'unburnt';
+          c.intensity = 0;
+          c.igniteAge = 0;
+          c.detected = false;
+        }
+      });
+    }
+    expect(warned).toBe(true);
+    expect(lost).toBe(false);
+    expect(s.trucks.length).toBe(2);
+  });
+
+  it('before 2045 the destruction clause is off: no deaths, ever', () => {
+    const s = createSeason(42, 2); // 2035
+    const at = stage(s);
+    const t = s.trucks[0]!;
+    t.x = at.x;
+    t.y = at.y;
+    t.water = 0;
+    encircle(s, at.x, at.y, 3);
+    for (let i = 0; i < 10; i++) {
+      for (const ev of step(s)) {
+        expect(ev.type).not.toBe('crewDanger');
+        expect(ev.type).not.toBe('unitLost');
+      }
+    }
+    expect(s.stats.firefightersLost).toBe(0);
+    expect(s.trucks.length).toBe(2);
+  });
+
+  it('a crew ordered to a clear tile drops its cuts and moves (the manual pull-out)', () => {
+    const s = createSeason(42, 5); // 2050
+    const crew = s.crews[0]!;
+    // Queue a cut first, then order the crew onto a road tile.
+    let veg: { x: number; y: number } | null = null;
+    outer: for (let dy = -6; dy <= 6; dy++)
+      for (let dx = -6; dx <= 6; dx++) {
+        const c = s.grid[(s.station.y + dy) * s.w + (s.station.x + dx)]!;
+        if (c.type === 'grass' || c.type === 'sparse') {
+          veg = { x: s.station.x + dx, y: s.station.y + dy };
+          break outer;
+        }
+      }
+    expect(veg).not.toBeNull();
+    step(s, [{ type: 'crewCut', x: veg!.x, y: veg!.y }]);
+    expect(crew.jobs.length).toBe(1);
+
+    const road = s.station; // the station tile is a road
+    step(s, [{ type: 'crewCut', x: road.x, y: road.y }]);
+    expect(crew.jobs.length).toBe(0);
+    for (let i = 0; i < 30 && !(crew.x === road.x && crew.y === road.y); i++) step(s);
+    expect(crew.x).toBe(road.x);
+    expect(crew.y).toBe(road.y);
+  });
+});

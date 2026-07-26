@@ -111,6 +111,9 @@ const loop = new GameLoop(
   state,
   (events) => {
     hud.handle(events);
+    for (const ev of events)
+      if (ev.type === 'unitLost' && ev.unit === 'engine' && ev.unitId === pinnedTruckId)
+        pinnedTruckId = null;
     const end = events.find((e) => e.type === 'seasonEnded');
     if (end && end.type === 'seasonEnded') onSeasonEnd(end.report);
   },

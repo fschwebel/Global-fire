@@ -1,4 +1,4 @@
-import { bomber as B, truck as T, unlocks } from '../sim/balance';
+import { bomber as B, crewUnit as CU, truck as T, unlocks } from '../sim/balance';
 import type { Bomber, Crew, GameEvent, GameState, Stats, Truck } from '../sim/state';
 import { cellAt, inActive } from '../sim/state';
 import { briefingFacts, reveals, unlockNotes } from './facts';
@@ -25,6 +25,7 @@ export function statLine(stats: Stats, year: number): string {
 }
 
 function engineStatus(s: GameState, t: Truck): string {
+  if (t.dangerTicks > 0) return 'IN DANGER — pull out!';
   if (t.path.length > 0) return 'En route';
   for (let dy = -1; dy <= 1; dy++)
     for (let dx = -1; dx <= 1; dx++) {
@@ -69,6 +70,7 @@ function bomberLoad(b: Bomber): number {
 }
 
 function crewStatus(c: Crew): string {
+  if (c.dangerTicks > 0) return 'IN DANGER — pull out!';
   if (c.path.length > 0) return 'En route';
   if (c.jobs.length > 0) return 'Cutting';
   return 'Standing by';
@@ -228,10 +230,15 @@ export class Hud {
     this.towerCount.hidden = s.towersAvailable <= 0;
     this.towerCount.textContent = `×${s.towersAvailable}`;
 
-    for (const t of s.trucks) {
-      const card = this.cards.get(t.id);
-      if (!card) continue;
+    for (const [id, card] of this.cards) {
+      const t = s.trucks.find((tr) => tr.id === id);
+      if (!t) {
+        // Overrun this season — the card stays as a memorial.
+        this.markLost(card, `${T.crew} firefighters lost`);
+        continue;
+      }
       card.classList.toggle('pinned', t.id === pinnedTruckId);
+      card.classList.toggle('danger', t.dangerTicks > 0);
       const status = card.querySelector<HTMLSpanElement>('.status');
       if (status) status.textContent = engineStatus(s, t);
       const bar = card.querySelector<HTMLDivElement>('.waterbar > div');
@@ -245,9 +252,13 @@ export class Hud {
       const bar = card.querySelector<HTMLDivElement>('.waterbar > div');
       if (bar) bar.style.width = `${bomberLoad(b) * 100}%`;
     }
-    for (const c of s.crews) {
-      const card = this.crewCards.get(c.id);
-      if (!card) continue;
+    for (const [id, card] of this.crewCards) {
+      const c = s.crews.find((cr) => cr.id === id);
+      if (!c) {
+        this.markLost(card, `${CU.crew} firefighters lost`);
+        continue;
+      }
+      card.classList.toggle('danger', c.dangerTicks > 0);
       const status = card.querySelector<HTMLSpanElement>('.status');
       if (status)
         status.textContent =
@@ -296,6 +307,20 @@ export class Hud {
             ev.count === 1 ? '1 resident did not escape.' : `${ev.count} residents did not escape.`,
           );
           break;
+        case 'crewDanger':
+          this.pushAlert(
+            ev.unit === 'engine'
+              ? `Engine ${ev.unitId} requesting pull-out — get them clear!`
+              : 'Fire crew requesting pull-out — get them clear!',
+          );
+          break;
+        case 'unitLost':
+          this.pushAlert(
+            ev.unit === 'engine'
+              ? `MAYDAY — Engine ${ev.unitId} overrun. ${ev.firefighters} firefighters lost.`
+              : `MAYDAY — the fire crew was overrun. ${ev.firefighters} firefighters lost.`,
+          );
+          break;
         case 'windShift':
           this.pushAlert('Wind shift — fronts will turn.');
           break;
@@ -316,6 +341,17 @@ export class Hud {
     card.classList.remove('flash');
     void card.offsetWidth; // restart the animation
     card.classList.add('flash');
+  }
+
+  private markLost(card: HTMLButtonElement, text: string): void {
+    if (card.classList.contains('lost')) return;
+    card.classList.add('lost');
+    card.classList.remove('danger', 'pinned');
+    card.disabled = true;
+    const status = card.querySelector<HTMLSpanElement>('.status');
+    if (status) status.textContent = text;
+    const bar = card.querySelector<HTMLDivElement>('.waterbar > div');
+    if (bar) bar.style.width = '0%';
   }
 
   /** True while a full-screen overlay (briefing or debrief) covers the game. */

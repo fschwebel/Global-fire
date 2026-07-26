@@ -13,6 +13,7 @@ import { flammable, ignite, intensityCap, spreadProb } from './fire';
 import type { Command, GameEvent, GameState, Village } from './state';
 import { cellAt, idx, inActive } from './state';
 import {
+  applyDangerRule,
   dispatchBomber,
   dispatchCrew,
   dispatchEngine,
@@ -239,6 +240,7 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
   updateTrucks(s);
   updateBombers(s, events);
   updateCrews(s);
+  applyDangerRule(s, events);
 
   // Detection: a fire is reported by age, by proximity call-in, by a watch
   // tower, or by spreading from an already-detected cell (handled at ignition).

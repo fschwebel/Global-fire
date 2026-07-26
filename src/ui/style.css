@@ -144,6 +144,27 @@ body {
   animation: dispatchflash 0.6s;
 }
 
+.engine-card.danger {
+  border-color: #e05020;
+  animation: dangerpulse 0.9s infinite alternate;
+}
+
+@keyframes dangerpulse {
+  from {
+    background: #1a2118;
+  }
+  to {
+    background: #4a2418;
+  }
+}
+
+/* A unit overrun this season: the card stays as a memorial. */
+.engine-card.lost {
+  opacity: 0.55;
+  border-color: #5a2020;
+  cursor: default;
+}
+
 @keyframes dispatchflash {
   0% {
     background: #4a5d3e;

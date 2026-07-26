@@ -59,6 +59,8 @@ export interface Truck {
   target: Point | null;
   /** Tiles traversed during the last tick (first = start, last = current) — the renderer interpolates along it. */
   trail: Point[];
+  /** Consecutive ticks in danger (burning tile / heavy fire beside) — the danger rule counts these. */
+  dangerTicks: number;
 }
 
 export interface Village {
@@ -102,6 +104,8 @@ export interface Crew {
   /** Cutting progress (ticks) on the current tile. */
   cutProgress: number;
   trail: Point[];
+  /** Consecutive ticks in danger — see Truck.dangerTicks. */
+  dangerTicks: number;
 }
 
 export interface Wind {
@@ -204,6 +208,10 @@ export type GameEvent =
   | { type: 'crewDispatched'; crewId: number }
   | { type: 'towerPlaced'; x: number; y: number }
   | { type: 'civilianDeaths'; count: number }
+  /** The radio warning: a unit has been in danger past the grace ticks. */
+  | { type: 'crewDanger'; unit: 'engine' | 'crew'; unitId: number }
+  /** A trapped unit was overrun — firefighters died and the unit is gone this season. */
+  | { type: 'unitLost'; unit: 'engine' | 'crew'; unitId: number; firefighters: number }
   | { type: 'reliefRain' }
   | { type: 'windShift' }
   | { type: 'seasonWindingDown' }

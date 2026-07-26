@@ -128,6 +128,24 @@ export const crewUnit = {
   speedFactor: 0.7,
   /** Ticks to cut one vegetation tile into a firebreak. */
   cutTicks: 3,
+  crew: 2,
+};
+
+/**
+ * Firefighter danger rule (gameplay doc §4.2). No auto-retreat: the radio
+ * warning is the player's cue, and a crew dies only when it is genuinely
+ * trapped — deterministic, never dice. Lost units are rebuilt next season.
+ */
+export const danger = {
+  /** The destruction clause activates with the counter reveal. */
+  from: 2045,
+  /** A unit is in danger on a burning tile, or beside this many cells at or above this intensity. */
+  neighbors: 3,
+  intensityThreshold: 7,
+  /** Consecutive danger ticks before the warning goes out (and death becomes possible). */
+  graceTicks: 3,
+  /** How far the escape search looks for a safe tile (Chebyshev). */
+  escapeRadius: 12,
 };
 
 export const habitatPerTile = { dense: 3, sparse: 2, grass: 1 } as Partial<
