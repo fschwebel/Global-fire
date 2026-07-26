@@ -9,7 +9,10 @@ export const balanceVersion = 1;
 export const TICK_MS = 800; // 1.25 Hz — an unhurried pace; balance is tick-based and unaffected
 
 export const spread = {
-  P_BASE: 0.22,
+  // Lower per-tick chance compensates the longer burn durations below: the
+  // front advances at a similar pace, but each cell burns ~1.6x longer, so a
+  // fire presents as a broad body of flame rather than a thin racing line.
+  P_BASE: 0.16,
   fuelFactor: {
     dense: 1.3,
     sparse: 1.0,
@@ -36,9 +39,9 @@ export const spread = {
 };
 
 export const burn = {
-  // Grass/sparse burn a little long for realism so young fires linger and
-  // creep instead of guttering out — the player must act, fires rarely die alone.
-  fuel: { dense: 8, sparse: 6, grass: 3, house: 6 } as Partial<Record<TileType, number>>,
+  // Long burn durations: many cells aflame at once — the fire is a body, not
+  // a line. Spread P_BASE is tuned down in compensation.
+  fuel: { dense: 12, sparse: 9, grass: 5, house: 9 } as Partial<Record<TileType, number>>,
   intensityCap: { dense: 9, sparse: 6, grass: 4, house: 7 } as Partial<Record<TileType, number>>,
   // Moist fuels could burn slower via clamp(base − slope × dryness, 1, base);
   // disabled after playtesting (base 1) — longer-lived cells distract engines

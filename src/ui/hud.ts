@@ -304,7 +304,10 @@ export class Hud {
         status.textContent =
           s.script.drought?.done && b.state === 'ready' ? 'Grounded — drought' : bomberStatus(b);
       const bar = card.querySelector<HTMLDivElement>('.waterbar > div');
-      if (bar) bar.style.width = `${bomberLoad(b) * 100}%`;
+      // Grounded by drought: the tank reads empty — there is no water to carry.
+      const grounded =
+        s.script.drought?.done === true && (b.state === 'ready' || b.state === 'reloading');
+      if (bar) bar.style.width = grounded ? '0%' : `${bomberLoad(b) * 100}%`;
     }
     for (const [id, card] of this.crewCards) {
       const c = s.crews.find((cr) => cr.id === id);
