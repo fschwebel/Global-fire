@@ -287,6 +287,7 @@ export function createSeason(seed: number, seasonIndex = 0): GameState {
     windStrBase: params.windStr,
     seasonLen: params.seasonLen,
     randomIgnitionRate: params.randomIgnitionRate,
+    rainTicks: 0,
     station,
     trucks: [1, 2].map((id) => ({
       id,

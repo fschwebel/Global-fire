@@ -1,8 +1,16 @@
 import { Renderer, TILE } from '../render/canvas';
 import { createSeason } from '../sim/scenario';
+import type { GameState } from '../sim/state';
 import { Hud } from '../ui/hud';
 import { MapViewport } from '../ui/viewport';
 import { GameLoop } from './loop';
+
+declare global {
+  interface Window {
+    /** Dev/test handle onto the live sim state (browser smoke tests). */
+    __gf?: { getState: () => GameState };
+  }
+}
 
 // Chosen from tuning probes: lively unfought fires, strongly containable when fought.
 const CAMPAIGN_SEED = 42;
@@ -93,5 +101,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 (document.getElementById('btn-restart') as HTMLButtonElement).addEventListener('click', restart);
+
+window.__gf = { getState: () => state };
 
 loop.start();

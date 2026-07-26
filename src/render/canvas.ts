@@ -37,6 +37,8 @@ export class Renderer {
   /** First-seen times for burning/burnt cells — drives short fade-ins. */
   private seenBurning = new Map<number, number>();
   private seenBurnt = new Map<number, number>();
+  /** Smoothed opacity of the rain overlay (fades showers in and out). */
+  private rainAlpha = 0;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -184,5 +186,51 @@ export class Renderer {
       ctx.fillStyle = '#4a90d9';
       ctx.fillRect(px + 3, py + TILE - 4, (TILE - 6) * (t.water / 24), 3);
     }
+
+    this.rainAlpha += ((s.rainTicks > 0 ? 1 : 0) - this.rainAlpha) * 0.06;
+    if (this.rainAlpha > 0.02) this.drawRain(now);
+  }
+
+  /**
+   * Oblique rain: streaks fall along their velocity vector (gravity + wind),
+   * so they lean with the wind's horizontal component; two depth layers.
+   */
+  private drawRain(now: number): void {
+    const ctx = this.ctx;
+    const s = this.state;
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+    ctx.save();
+    ctx.globalAlpha = this.rainAlpha;
+
+    // Cool grey wash while the shower passes.
+    ctx.fillStyle = 'rgba(90, 110, 140, 0.16)';
+    ctx.fillRect(0, 0, W, H);
+
+    const windX = Math.cos(s.wind.dir) * (5 + s.wind.str * 14);
+    const layers = [
+      { count: 90, len: 15, speed: 0.6, width: 1.3, alpha: 0.5 },
+      { count: 90, len: 9, speed: 0.38, width: 1, alpha: 0.28 },
+    ];
+    const span = W + 160;
+    for (const layer of layers) {
+      const slant = windX * (layer.len / 15);
+      ctx.strokeStyle = `rgba(200, 215, 235, ${layer.alpha})`;
+      ctx.lineWidth = layer.width;
+      ctx.beginPath();
+      for (let i = 0; i < layer.count; i++) {
+        const a = (((i * 2654435761) >>> 0) % 100000) / 100000;
+        const b = (((i * 40503 + 12345) >>> 0) % 100000) / 100000;
+        const period = H + 80;
+        const y = ((b * period + now * layer.speed * (0.8 + a * 0.4)) % period) - 60;
+        // Horizontal drift follows the fall so the whole streak field leans coherently.
+        const drift = ((y + 60) / layer.len) * slant;
+        const x = ((((a * span + drift) % span) + span) % span) - 80;
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + slant, y + layer.len);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 }

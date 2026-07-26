@@ -66,11 +66,15 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
     if (!r.done && s.tick >= r.tick) {
       applyRainTick(s);
       r.done = true;
+      s.rainTicks = Math.max(s.rainTicks, rain.globalWetTicks);
       events.push({ type: 'reliefRain' });
     }
   }
   const rainsArrived = s.tick >= s.seasonLen;
-  if (rainsArrived) applyRainTick(s);
+  if (rainsArrived) {
+    applyRainTick(s);
+    s.rainTicks = Math.max(s.rainTicks, 2);
+  }
 
   // Ignitions: scripted schedule + random background rate.
   if (!rainsArrived) {
@@ -133,6 +137,7 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
 
   // Timers.
   for (const c of s.grid) if (c.wetTimer > 0) c.wetTimer -= 1;
+  if (s.rainTicks > 0) s.rainTicks -= 1;
 
   updateTrucks(s);
 

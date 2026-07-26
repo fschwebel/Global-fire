@@ -102,6 +102,8 @@ export interface GameState {
   windStrBase: number;
   seasonLen: number;
   randomIgnitionRate: number;
+  /** Ticks of visible rainfall remaining (presentation window; mechanics apply separately). */
+  rainTicks: number;
   station: Point;
   trucks: Truck[];
   stats: Stats;

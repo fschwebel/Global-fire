@@ -101,6 +101,15 @@ describe('season lifecycle', () => {
     expect(s.grid.every((c) => c.state !== 'burning')).toBe(true);
   });
 
+  it('relief rain opens a visible rain window that then closes', () => {
+    const s = createSeason(42, 0);
+    s.script.reliefRains[0]!.tick = 30;
+    for (let i = 0; i <= 30; i++) step(s);
+    expect(s.rainTicks).toBeGreaterThan(0);
+    for (let i = 0; i < 40 && !s.ended; i++) step(s);
+    expect(s.rainTicks).toBe(0);
+  });
+
   it('2026 fire is detected quickly (called in near a road)', () => {
     const s = createSeason(42, 0);
     let detectedAt = -1;
