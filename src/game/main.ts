@@ -1,6 +1,7 @@
 import { Renderer, TILE } from '../render/canvas';
 import { createSeason } from '../sim/scenario';
 import { Hud } from '../ui/hud';
+import { MapViewport } from '../ui/viewport';
 import { GameLoop } from './loop';
 
 // Chosen from tuning probes: lively unfought fires, strongly containable when fought.
@@ -16,6 +17,12 @@ function togglePin(truckId: number): void {
 const canvas = document.getElementById('map') as HTMLCanvasElement;
 const renderer = new Renderer(canvas, state);
 const hud = new Hud(state, togglePin);
+const viewport = new MapViewport(
+  document.getElementById('mapwrap') as HTMLElement,
+  canvas,
+  state.w * TILE,
+  state.h * TILE,
+);
 
 const loop = new GameLoop(
   state,
@@ -38,6 +45,7 @@ function restart(): void {
 // --- Input -----------------------------------------------------------------
 
 canvas.addEventListener('click', (ev) => {
+  if (viewport.consumeDragged()) return; // a pan/pinch, not an order
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;

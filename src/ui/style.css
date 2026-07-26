@@ -19,6 +19,7 @@ body {
   flex-direction: column;
   gap: 6px;
   padding: 10px;
+  width: min(1112px, 100vw);
 }
 
 #topbar,
@@ -146,17 +147,31 @@ body {
   background: #4a90d9;
 }
 
+#main {
+  align-items: flex-start;
+}
+
+/* Clipping viewport: the canvas keeps its natural size and is pan/zoomed
+   inside via transform (src/ui/viewport.ts). */
 #mapwrap {
   position: relative;
   flex: 1;
+  min-width: 0;
+  aspect-ratio: 3 / 2;
+  max-height: 80vh;
+  overflow: hidden;
+  border: 1px solid #2c352a;
+  background: #0d120c;
+  touch-action: none;
 }
 
 #map {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: block;
-  border: 1px solid #2c352a;
   image-rendering: pixelated;
   cursor: crosshair;
-  max-width: 100%;
 }
 
 #alerts {
@@ -266,4 +281,102 @@ body {
   padding: 10px 24px;
   font-size: 16px;
   cursor: pointer;
+}
+
+/* Portrait phones: stack the layout — map first, measures and engines below
+   within thumb reach; condensed HUD text (ux doc §4.5). */
+@media (max-width: 720px) {
+  body {
+    align-items: flex-start;
+  }
+
+  #app {
+    padding: 6px;
+    gap: 4px;
+  }
+
+  #topbar {
+    flex-wrap: wrap;
+    row-gap: 2px;
+    gap: 10px;
+  }
+
+  #year {
+    font-size: 17px;
+  }
+
+  #stats {
+    font-size: 13px;
+  }
+
+  #weather {
+    font-size: 12px;
+  }
+
+  #main {
+    flex-direction: column-reverse;
+  }
+
+  #mapwrap {
+    width: 100%;
+    flex: none;
+  }
+
+  #sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  #palette {
+    display: flex;
+    gap: 4px;
+  }
+
+  #palette .tool,
+  #palette .slot {
+    width: 48px;
+    min-height: 44px;
+  }
+
+  #engines {
+    flex-direction: row;
+    flex: 1;
+    gap: 4px;
+  }
+
+  .engine-card {
+    flex: 1;
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+
+  #alerts {
+    max-width: 72%;
+  }
+
+  .alert {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+
+  #bottombar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  #selection {
+    font-size: 12px;
+  }
+
+  #timectl {
+    justify-content: space-between;
+  }
+
+  #seasonbar {
+    flex: 1;
+    width: auto;
+  }
 }
