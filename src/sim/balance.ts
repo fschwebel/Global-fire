@@ -162,13 +162,18 @@ export const droughtEvent = {
 export const danger = {
   /** The destruction clause activates with the counter reveal. */
   from: 2045,
-  /** A unit is in danger on a burning tile, or beside this many cells at or above this intensity. */
+  /** An engine is in danger on a burning tile, or beside this many heavy cells. */
   neighbors: 3,
-  intensityThreshold: 7,
+  /** Crews are on foot, waterless, and next to the work: fewer heavy cells suffice. */
+  crewNeighbors: 2,
+  /** "Heavy" fire — sparse forest (cap 6) and up counts; grass (cap 4) never does. */
+  intensityThreshold: 5,
   /** Consecutive danger ticks before the warning goes out (and death becomes possible). */
   graceTicks: 3,
   /** How far the escape search looks for a safe tile (Chebyshev). */
   escapeRadius: 12,
+  /** An escape may not squeeze through tiles flanked by this many heavy cells. */
+  corridorFlanks: 2,
 };
 
 export const habitatPerTile = { dense: 3, sparse: 2, grass: 1 } as Partial<

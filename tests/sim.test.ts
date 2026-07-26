@@ -1028,3 +1028,118 @@ describe('the ending', () => {
     expect(a.firefightersLost).toBe(0); // nobody was sent anywhere
   });
 });
+
+describe('danger rule retune', () => {
+  /** Keep exactly `keep` burning at the given intensity; snuff everything else. */
+  function freeze(s: GameState, keep: Map<number, number>): void {
+    s.grid.forEach((c, i) => {
+      const intensity = keep.get(i);
+      if (intensity !== undefined) {
+        c.state = 'burning';
+        c.intensity = intensity;
+        c.fuel = 99;
+      } else if (c.state === 'burning') {
+        c.state = 'unburnt';
+        c.intensity = 0;
+        c.igniteAge = 0;
+        c.detected = false;
+      }
+    });
+  }
+
+  it('sparse-forest fire (intensity 6) now endangers an engine', () => {
+    const s = createSeason(42, 4); // 2045
+    const t = s.trucks[0]!;
+    t.x = s.bounds.x0 + 12;
+    t.y = s.bounds.y0 + 12;
+    t.water = 0;
+    const keep = new Map<number, number>();
+    for (const [dx, dy] of [
+      [-1, -1],
+      [0, -1],
+      [1, -1],
+    ] as const)
+      keep.set((t.y + dy) * s.w + (t.x + dx), 6);
+    for (const i of keep.keys()) s.grid[i]!.type = 'sparse'; // cap 6 keeps intensity ≥ threshold
+    freeze(s, keep);
+    let warned = false;
+    let lost = false;
+    for (let i = 0; i < 6; i++) {
+      for (const ev of step(s)) {
+        if (ev.type === 'crewDanger' && ev.unit === 'engine') warned = true;
+        if (ev.type === 'unitLost') lost = true;
+      }
+      freeze(s, keep);
+    }
+    expect(warned).toBe(true); // under the old threshold (7) this never fired
+    expect(lost).toBe(false); // the whole south side is open
+  });
+
+  it('crews are warned at two heavy cells where engines are not', () => {
+    const s = createSeason(42, 5); // 2050 — the crew exists
+    const t = s.trucks[0]!;
+    t.x = s.bounds.x0 + 10;
+    t.y = s.bounds.y0 + 10;
+    t.water = 0;
+    const crew = s.crews[0]!;
+    crew.x = s.bounds.x0 + 30;
+    crew.y = s.bounds.y0 + 20;
+    const keep = new Map<number, number>();
+    for (const u of [t, crew])
+      for (const [dx, dy] of [
+        [-1, -1],
+        [0, -1],
+      ] as const)
+        keep.set((u.y + dy) * s.w + (u.x + dx), 8);
+    for (const i of keep.keys()) s.grid[i]!.type = 'dense'; // cap 9 keeps intensity heavy
+    freeze(s, keep);
+    let crewWarned = false;
+    let engineWarned = false;
+    for (let i = 0; i < 6; i++) {
+      for (const ev of step(s)) {
+        if (ev.type === 'crewDanger' && ev.unit === 'crew') crewWarned = true;
+        if (ev.type === 'crewDanger' && ev.unit === 'engine') engineWarned = true;
+      }
+      freeze(s, keep);
+    }
+    expect(crewWarned).toBe(true);
+    expect(engineWarned).toBe(false);
+  });
+
+  it('a corridor between two flame walls is not an escape (honest entrapment)', () => {
+    const s = createSeason(42, 4); // 2045
+    // A 19×3 all-land strip: corridor row flanked by two wall rows.
+    let site: { x: number; y: number } | null = null;
+    for (let y = s.bounds.y0 + 2; y < s.bounds.y1 - 2 && !site; y++)
+      outer: for (let x = s.bounds.x0 + 10; x < s.bounds.x1 - 10; x++) {
+        for (let dy = -1; dy <= 1; dy++)
+          for (let dx = -9; dx <= 9; dx++) {
+            const tt = s.grid[(y + dy) * s.w + (x + dx)]!.type;
+            if (tt === 'water' || tt === 'rock') continue outer;
+          }
+        site = { x, y };
+        break;
+      }
+    expect(site).not.toBeNull();
+
+    const t = s.trucks[0]!;
+    t.x = site!.x;
+    t.y = site!.y;
+    t.water = 0;
+    const keep = new Map<number, number>();
+    for (let wx = site!.x - 8; wx <= site!.x + 8; wx++) {
+      keep.set((site!.y - 1) * s.w + wx, 8);
+      keep.set((site!.y + 1) * s.w + wx, 8);
+    }
+    for (const i of keep.keys()) s.grid[i]!.type = 'dense'; // cap 9 keeps the walls heavy
+    freeze(s, keep);
+    let lost = false;
+    for (let i = 0; i < 10 && !lost; i++) {
+      lost = step(s).some((ev) => ev.type === 'unitLost' && ev.unit === 'engine');
+      freeze(s, keep);
+    }
+    // The open corridor ends are flanked on both sides — not a way out.
+    expect(lost).toBe(true);
+    expect(s.stats.firefightersLost).toBe(4);
+  });
+});

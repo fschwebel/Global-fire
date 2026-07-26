@@ -430,19 +430,24 @@ export function updateCrews(s: GameState): void {
 
 // --- Firefighter danger rule -------------------------------------------------
 
-function inDanger(s: GameState, u: { x: number; y: number }): boolean {
-  if (cellAt(s, u.x, u.y).state === 'burning') return true;
+/** Burning Moore neighbours at or above the heavy-fire threshold. */
+function heavyNeighbors(s: GameState, x: number, y: number): number {
   let heavy = 0;
   for (let dy = -1; dy <= 1; dy++)
     for (let dx = -1; dx <= 1; dx++) {
       if (dx === 0 && dy === 0) continue;
-      const nx = u.x + dx;
-      const ny = u.y + dy;
+      const nx = x + dx;
+      const ny = y + dy;
       if (!inActive(s, nx, ny)) continue;
       const c = cellAt(s, nx, ny);
       if (c.state === 'burning' && c.intensity >= D.intensityThreshold) heavy++;
     }
-  return heavy >= D.neighbors;
+  return heavy;
+}
+
+function inDanger(s: GameState, u: { x: number; y: number }, neighbors: number): boolean {
+  if (cellAt(s, u.x, u.y).state === 'burning') return true;
+  return heavyNeighbors(s, u.x, u.y) >= neighbors;
 }
 
 /** A tile is safe when it is not burning and no Moore neighbour burns. */
@@ -481,6 +486,8 @@ function trapped(s: GameState, u: { x: number; y: number }): boolean {
         if (seen.has(i)) continue;
         const c = cellAt(s, nx, ny);
         if (c.state === 'burning' || T.moveSpeed[c.type] <= 0) continue;
+        // An honest escape: no squeezing through corridors flanked by heavy fire.
+        if (heavyNeighbors(s, nx, ny) >= D.corridorFlanks) continue;
         seen.add(i);
         queue.push({ x: nx, y: ny });
       }
@@ -493,11 +500,12 @@ function dangerSweep(
   units: (Truck | Crew)[],
   kind: 'engine' | 'crew',
   crewSize: number,
+  neighbors: number,
   events: GameEvent[],
 ): void {
   const lost: number[] = [];
   for (const u of units) {
-    if (!inDanger(s, u)) {
+    if (!inDanger(s, u, neighbors)) {
       u.dangerTicks = 0;
       continue;
     }
@@ -523,6 +531,6 @@ function dangerSweep(
  */
 export function applyDangerRule(s: GameState, events: GameEvent[]): void {
   if (s.seasonYear < D.from) return;
-  dangerSweep(s, s.trucks, 'engine', T.crew, events);
-  dangerSweep(s, s.crews, 'crew', CU.crew, events);
+  dangerSweep(s, s.trucks, 'engine', T.crew, D.neighbors, events);
+  dangerSweep(s, s.crews, 'crew', CU.crew, D.crewNeighbors, events);
 }
