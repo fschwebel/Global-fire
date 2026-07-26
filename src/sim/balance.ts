@@ -51,6 +51,8 @@ export const ignitionSchedule = {
   staggerBase: 90,
   staggerPerSeason: 6,
   staggerMin: 40,
+  /** When the valley is quiet and more fires are scheduled, pull the next one to at most this many ticks away. */
+  quietGap: 6,
 };
 
 export const detection = {

@@ -1,4 +1,4 @@
-import { detection, habitatPerTile, rain, windDriftPerTick } from './balance';
+import { detection, habitatPerTile, ignitionSchedule, rain, windDriftPerTick } from './balance';
 import { flammable, ignite, intensityCap, spreadProb } from './fire';
 import type { Command, GameEvent, GameState } from './state';
 import { cellAt, idx, inBounds } from './state';
@@ -171,10 +171,22 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
 
   s.tick += 1;
 
-  // Season end: after the rains have killed the last fire, or early when the
-  // schedule is exhausted and the valley is quiet.
   const anyBurning = s.grid.some((c) => c.state === 'burning');
   const scheduleDone = s.script.ignitions.every((i) => i.done);
+
+  // A quiet valley shouldn't mean a long wait: once the first fire has come
+  // and gone, pull the next scheduled ignition to at most a few seconds away.
+  if (!anyBurning && !scheduleDone && !rainsArrived && s.script.ignitions.some((i) => i.done)) {
+    const next = s.script.ignitions.reduce<(typeof s.script.ignitions)[number] | null>(
+      (best, ig) => (ig.done ? best : best === null || ig.tick < best.tick ? ig : best),
+      null,
+    );
+    if (next && next.tick > s.tick + ignitionSchedule.quietGap)
+      next.tick = s.tick + ignitionSchedule.quietGap;
+  }
+
+  // Season end: after the rains have killed the last fire, or early when the
+  // schedule is exhausted and the valley is quiet.
   if (
     (rainsArrived && !anyBurning) ||
     (!anyBurning && scheduleDone && s.tick > 40 && s.randomIgnitionRate === 0)

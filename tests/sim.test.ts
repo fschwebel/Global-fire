@@ -101,6 +101,30 @@ describe('season lifecycle', () => {
     expect(s.grid.every((c) => c.state !== 'burning')).toBe(true);
   });
 
+  it('extinguishing all fires pulls the next scheduled ignition forward', () => {
+    const s = createSeason(42, 0);
+    const first = s.script.ignitions[0]!;
+    for (let i = 0; i <= first.tick + 2; i++) step(s);
+    // Simulate a clean extinguish of everything burning.
+    for (const c of s.grid) {
+      if (c.state === 'burning') {
+        c.state = 'unburnt';
+        c.intensity = 0;
+        c.detected = false;
+        c.igniteAge = 0;
+      }
+    }
+    const before = s.tick;
+    let reignited = -1;
+    for (let i = 0; i < 30 && reignited === -1; i++) {
+      step(s);
+      if (s.grid.some((c) => c.state === 'burning')) reignited = s.tick - before;
+    }
+    // Next fire arrives within the quiet gap (plus a tick of slack), not ~90 ticks later.
+    expect(reignited).toBeGreaterThan(0);
+    expect(reignited).toBeLessThanOrEqual(10);
+  });
+
   it('relief rain opens a visible rain window that then closes', () => {
     const s = createSeason(42, 0);
     s.script.reliefRains[0]!.tick = 30;
