@@ -1,6 +1,6 @@
 # Tech Stack Proposal & Architecture
 
-> **Canon note** (binding, from [`../PLAN.md`](../PLAN.md) §2): sim runs at **2 Hz fixed ticks** on a **48×32** grid — the sim is cheap by construction; rendering is the only performance concern · balance lives in `balance.ts`, facts in `facts.json` · audio scope is one global ambience crossfade + scar-tile mute · zero analytics at 1.0 · MIT license, CC0 assets tracked in `ASSETS.md`.
+> **Canon note** (binding, from [`../PLAN.md`](../PLAN.md) §2): sim runs at **800 ms fixed ticks** (1.25 Hz) on a **60×40** world (only the season's centered sector is active) — the sim is cheap by construction; rendering is the only performance concern · balance lives in `balance.ts`, facts in `facts.json` · audio scope is one global ambience crossfade + scar-tile mute · zero analytics at 1.0 · MIT license, CC0 assets tracked in `ASSETS.md`.
 
 ## Recommended stack at a glance
 
@@ -22,7 +22,7 @@
 
 ## 1. Rendering
 
-Needs: a 48×32 tile map, an animated fire front with smoke/glow, a modest number of moving sprites (trucks, the water bomber, towers), and screen-space UI. All options can technically do this; the differences are effort, "juice," and lock-in.
+Needs: a 60×40 tile world (rendered as the season's sector), an animated fire front with smoke/glow, a modest number of moving sprites (trucks, the water bomber, towers), and screen-space UI. All options can technically do this; the differences are effort, "juice," and lock-in.
 
 | Option | Fit | Notes |
 |---|---|---|
@@ -55,7 +55,7 @@ Needs: a 48×32 tile map, an animated fire front with smoke/glow, a modest numbe
 
 **Core principle: the simulation is a pure, deterministic, renderer-agnostic TypeScript module.** It never imports Pixi, never touches the DOM, never calls `Math.random()` or `Date.now()`.
 
-- **Fixed timestep.** Sim ticks at 2 Hz (canon); the render loop runs at display rate and interpolates sprite positions between ticks. Classic accumulator loop.
+- **Fixed timestep.** Sim ticks at 800 ms (canon); the render loop runs at display rate and interpolates sprite positions between ticks. Classic accumulator loop.
 - **Seeded RNG.** One small PRNG (mulberry32-class, ~10 lines), seeded per campaign. Same seed + same player commands ⇒ same outcome: reproducible bug reports, testable balance, the do-nothing comparison sim for free — and a "daily challenge" mode later, if ever wanted.
 - **Input as commands, output as events.**
   - *UI → sim:* player actions (`DeployTruck{cell}`, `EvacuateVillage{id}`, `DispatchBomber{line}`) push onto a **command queue**, applied only at tick boundaries — determinism preserved, click handling decoupled from sim timing.
@@ -127,7 +127,7 @@ Producible by a small team with no dedicated artist:
 
 ## 6. Performance
 
-Target: **60 fps render on a mid-range phone**; the 2 Hz sim over 1,536 cells is trivial. The only ways to lose 60 fps are self-inflicted:
+Target: **60 fps render on a mid-range phone**; the 1.25 Hz sim over ≤2,400 cells is trivial. The only ways to lose 60 fps are self-inflicted:
 
 - **Bake the terrain.** Render all static tiles once per season into a `RenderTexture` (one draw call thereafter); update only burning/burnt cells (the fire front is a small subset). The single most important optimization.
 - **Batch particles.** Fire/smoke via `ParticleContainer` with a pooled array — hundreds of particles, one draw call. Cap the budget (~500) and degrade count, never frame rate.

@@ -28,8 +28,8 @@ These resolve every contradiction found in design review. Each design doc restat
 ### 2.1 Structure
 
 - Campaign: **ten seasons — 2026, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2065, 2070**. Season = one level, 3–5 minutes (finale ~6–8). Between consecutive seasons, 4–5 real years pass; a brief interstitial card ("the years between") summarizes them. Each played season is framed as the *worst* season of its half-decade — records, not averages, which is how climate change is actually experienced.
-- **One persistent map** for the whole campaign (48×32 tiles, 1 tile = 1 ha, curated seed). Seasons are ignition/weather scripts over the same map. Burn scars persist and regrow across the multi-year gaps; some high-severity burns convert permanently to shrubland, plainly visible by 2060.
-- Simulation: probabilistic cellular automaton, square grid, Moore 8-neighbourhood, double-buffered, **fixed 2 Hz ticks** (500 ms), seeded PRNG, pure `step(state) → state` core. Real-time render at 60 fps; tactical pause + 2× fast-forward only.
+- **One persistent world** for the whole campaign (60×40 tiles, 1 tile = 1 ha, curated seed). Each season is played on a centered **sector** of it — 44×30 in 2026, widened by the department every two seasons until the full 60×40 is yours by 2065. Seasons are ignition/weather scripts over the same world; scars accumulate on it regardless of the current sector — the map stays the campaign's diary. Burn scars regrow across the multi-year gaps; some high-severity dense burns convert permanently to grassland, plainly visible by 2060.
+- Simulation: probabilistic cellular automaton, square grid, Moore 8-neighbourhood, double-buffered, **fixed 800 ms ticks** (1.25 Hz), seeded PRNG, pure `step(state) → state` core. Real-time render at 60 fps; tactical pause + 2× fast-forward only.
 - All tunables live in a single `balance.ts`; every fact lives in a sourced `facts.json`.
 
 ### 2.2 The season table (canonical)

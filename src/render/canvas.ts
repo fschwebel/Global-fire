@@ -1,12 +1,23 @@
-import { truck as T } from '../sim/balance';
+import { regrowth as RG, truck as T } from '../sim/balance';
 import type { GameState, TileType, Truck } from '../sim/state';
 import { idx } from '../sim/state';
 
 export const TILE = 20;
 
+const TERRAIN: Record<TileType, string> = {
+  dense: '#1b5e20',
+  sparse: '#3f8a3f',
+  grass: '#9ccc65',
+  water: '#4a90d9',
+  road: '#b0a08a',
+  house: '#c98a4b',
+  firebreak: '#8d6e63',
+  rock: '#8f948d',
+};
+
 /**
- * Pixel position of an engine, interpolated along the tiles it traversed
- * during the current tick — engines drive corner-by-corner instead of teleporting.
+ * Pixel position of an engine in world space, interpolated along the tiles it
+ * traversed during the current tick — engines drive instead of teleporting.
  */
 function truckPixelPos(t: Truck, alpha: number): { px: number; py: number } {
   const trail = t.trail;
@@ -20,17 +31,7 @@ function truckPixelPos(t: Truck, alpha: number): { px: number; py: number } {
   return { px: (a.x + (b.x - a.x) * f) * TILE, py: (a.y + (b.y - a.y) * f) * TILE };
 }
 
-const TERRAIN: Record<TileType, string> = {
-  dense: '#1b5e20',
-  sparse: '#3f8a3f',
-  grass: '#9ccc65',
-  water: '#4a90d9',
-  road: '#b0a08a',
-  house: '#c98a4b',
-  firebreak: '#8d6e63',
-  rock: '#8f948d',
-};
-
+/** Renders the active sector crop of the world grid. */
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
   private terrain: HTMLCanvasElement;
@@ -45,19 +46,26 @@ export class Renderer {
     private canvas: HTMLCanvasElement,
     private state: GameState,
   ) {
-    canvas.width = state.w * TILE;
-    canvas.height = state.h * TILE;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('no 2d context');
     this.ctx = ctx;
     this.terrain = document.createElement('canvas');
-    this.terrain.width = canvas.width;
-    this.terrain.height = canvas.height;
+    this.resize();
+  }
+
+  /** Sector width/height in pixels (the canvas size). */
+  private resize(): void {
+    const b = this.state.bounds;
+    this.canvas.width = (b.x1 - b.x0) * TILE;
+    this.canvas.height = (b.y1 - b.y0) * TILE;
+    this.terrain.width = this.canvas.width;
+    this.terrain.height = this.canvas.height;
+    this.terrainDirty = true;
   }
 
   setState(state: GameState): void {
     this.state = state;
-    this.terrainDirty = true;
+    this.resize();
     this.seenBurning.clear();
     this.seenBurnt.clear();
   }
@@ -67,38 +75,52 @@ export class Renderer {
     const tctx = this.terrain.getContext('2d');
     if (!tctx) return;
     const s = this.state;
-    for (let y = 0; y < s.h; y++)
-      for (let x = 0; x < s.w; x++) {
+    const b = s.bounds;
+    for (let y = b.y0; y < b.y1; y++)
+      for (let x = b.x0; x < b.x1; x++) {
         const c = s.grid[idx(s, x, y)]!;
+        const px = (x - b.x0) * TILE;
+        const py = (y - b.y0) * TILE;
         tctx.fillStyle = TERRAIN[c.type];
-        tctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+        tctx.fillRect(px, py, TILE, TILE);
         if (c.type === 'house') {
           tctx.fillStyle = '#8a5a2b';
-          tctx.fillRect(x * TILE + 3, y * TILE + 3, TILE - 6, TILE - 10);
+          tctx.fillRect(px + 3, py + 3, TILE - 6, TILE - 10);
+        }
+        // Old burn scars: ash-grey shadow that fades over the years.
+        if (c.burntYear > 0 && s.seasonYear - c.burntYear <= RG.scarVisibleYears) {
+          const age = s.seasonYear - c.burntYear;
+          tctx.fillStyle = `rgba(40, 32, 28, ${Math.max(0.08, 0.3 - age * 0.028)})`;
+          tctx.fillRect(px, py, TILE, TILE);
         }
       }
     // Station marker.
+    const sx = (s.station.x - b.x0) * TILE;
+    const sy = (s.station.y - b.y0) * TILE;
     tctx.fillStyle = '#c62828';
-    tctx.fillRect(s.station.x * TILE + 4, s.station.y * TILE + 4, TILE - 8, TILE - 8);
+    tctx.fillRect(sx + 4, sy + 4, TILE - 8, TILE - 8);
     tctx.fillStyle = '#fff';
-    tctx.fillRect(s.station.x * TILE + 8, s.station.y * TILE + 6, 4, TILE - 12);
+    tctx.fillRect(sx + 8, sy + 6, 4, TILE - 12);
     this.terrainDirty = false;
   }
 
   draw(selectedTruckId: number | null, alpha = 1): void {
     if (this.terrainDirty) this.bakeTerrain();
     const s = this.state;
+    const b = s.bounds;
+    const ox = b.x0 * TILE;
+    const oy = b.y0 * TILE;
     const ctx = this.ctx;
     const now = performance.now();
     const frame = Math.floor(now / 130); // per-frame flicker clock, independent of sim ticks
     ctx.drawImage(this.terrain, 0, 0);
 
-    for (let y = 0; y < s.h; y++)
-      for (let x = 0; x < s.w; x++) {
+    for (let y = b.y0; y < b.y1; y++)
+      for (let x = b.x0; x < b.x1; x++) {
         const i = idx(s, x, y);
         const c = s.grid[i]!;
-        const px = x * TILE;
-        const py = y * TILE;
+        const px = (x - b.x0) * TILE;
+        const py = (y - b.y0) * TILE;
         if (c.state !== 'burning') this.seenBurning.delete(i);
         if (c.state !== 'burnt') this.seenBurnt.delete(i);
         if (c.state === 'burnt') {
@@ -151,8 +173,8 @@ export class Renderer {
     // Destination flags for engines en route.
     for (const t of s.trucks) {
       if (!t.target) continue;
-      const fx = t.target.x * TILE;
-      const fy = t.target.y * TILE;
+      const fx = t.target.x * TILE - ox;
+      const fy = t.target.y * TILE - oy;
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -170,8 +192,8 @@ export class Renderer {
       const key = `${Math.round(pos.px)},${Math.round(pos.py)}`;
       const stacked = seen.has(key);
       seen.add(key);
-      const px = pos.px + (stacked ? 5 : 0);
-      const py = pos.py + (stacked ? 5 : 0);
+      const px = pos.px - ox + (stacked ? 5 : 0);
+      const py = pos.py - oy + (stacked ? 5 : 0);
       ctx.fillStyle = '#e53935';
       ctx.fillRect(px + 3, py + 5, TILE - 6, TILE - 10);
       ctx.fillStyle = '#fff';

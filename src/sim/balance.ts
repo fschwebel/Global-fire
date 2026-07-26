@@ -89,13 +89,36 @@ export const habitatPerTile = { dense: 3, sparse: 2, grass: 1 } as Partial<
 >;
 
 export const map = {
-  W: 48,
-  H: 32,
-  villageCount: 3,
+  /** World size — the largest sector (2065/2070). Earlier seasons play a centered crop. */
+  W: 60,
+  H: 40,
+  villageCount: 4,
+  /** First village stays close to the station so the smallest sector has stakes. */
+  firstVillageMaxDist: 11,
   villageMinHouses: 6,
   villageMaxHouses: 12,
   occupantsMin: 4,
   occupantsMax: 10,
+};
+
+/** Active sector size per season pair (grows every 2 seasons, centered on the station). */
+export const sectorSizes: [number, number][] = [
+  [44, 30], // 2026, 2030
+  [48, 32], // 2035, 2040
+  [52, 35], // 2045, 2050
+  [56, 37], // 2055, 2060
+  [60, 40], // 2065, 2070
+];
+
+export const regrowth = {
+  /** Years after a burn: scar → grass → sparse → original type. */
+  grassAfter: 2,
+  sparseAfter: 6,
+  fullAfter: 12,
+  /** High-severity dense burns convert permanently to grassland. */
+  denseConversionChance: 0.25,
+  /** Ash tint stays visible on regrown ground for this many years. */
+  scarVisibleYears: 9,
 };
 
 /** Wind direction drifts up to ±1°/tick (±30°/30 ticks). */

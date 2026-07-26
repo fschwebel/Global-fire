@@ -1,7 +1,14 @@
-import { ignitionSchedule as IG, map as M, truck as T, seasons } from './balance';
+import {
+  ignitionSchedule as IG,
+  map as M,
+  regrowth as RG,
+  truck as T,
+  seasons,
+  sectorSizes,
+} from './balance';
 import { hash2, mulberry32 } from './rng';
-import type { Cell, GameState, Point, SeasonScript, TileType } from './state';
-import { idx, inBounds } from './state';
+import type { Bounds, Cell, GameState, Point, SeasonScript, TileType } from './state';
+import { idx, inActive, inBounds } from './state';
 
 /** Smooth value noise in [0,1] from a lattice of hashed corners. */
 function valueNoise(x: number, y: number, scale: number, seed: number): number {
@@ -25,6 +32,7 @@ function valueNoise(x: number, y: number, scale: number, seed: number): number {
 function blankCell(type: TileType): Cell {
   return {
     type,
+    baseType: type,
     state: 'unburnt',
     fuel: 0,
     intensity: 0,
@@ -32,12 +40,13 @@ function blankCell(type: TileType): Cell {
     occupants: 0,
     igniteAge: 0,
     detected: false,
+    burntYear: 0,
   };
 }
 
 /**
- * Deterministic map generation from the campaign seed (gameplay doc §3.3).
- * One persistent map for the whole campaign.
+ * Deterministic world generation from the campaign seed (gameplay doc §3.3).
+ * One persistent world; each season plays a centered crop of it (sector).
  */
 export function generateMap(seed: number): { grid: Cell[]; station: Point; villages: Point[] } {
   const rng = mulberry32(seed ^ 0x9e3779b9);
@@ -64,54 +73,90 @@ export function generateMap(seed: number): { grid: Cell[]; station: Point; villa
   for (let x = 0; x < M.W; x++) {
     for (let w = 0; w < 2; w++) {
       const yy = ry + w;
-      if (yy >= 0 && yy < M.H) grid[yy * M.W + x]!.type = 'water';
+      if (yy >= 0 && yy < M.H) setBase(grid[yy * M.W + x]!, 'water');
     }
     const r = rng();
     if (r < 0.3 && ry > 2) ry--;
     else if (r > 0.7 && ry < M.H - 3) ry++;
   }
 
-  // 3. Fire station: roughly central, not on water.
-  const station: Point = { x: Math.floor(M.W / 2), y: Math.floor(M.H / 2) };
-  while (grid[station.y * M.W + station.x]!.type === 'water') station.y++;
-  grid[station.y * M.W + station.x]!.type = 'road';
+  // 3. Trunk roads: an east–west and a north–south road cross the whole world
+  //    (leaving it at four edges, as real regional roads do), meeting at the
+  //    fire station near the centre. Water crossings become bridges (paved).
+  const pave = (x: number, y: number) => {
+    const cell = grid[y * M.W + x]!;
+    if (cell.type !== 'house') setBase(cell, 'road');
+  };
+  const cx0 = Math.floor(M.W / 2);
+  const cy0 = Math.floor(M.H / 2);
+  let ty = cy0;
+  const ewRoad: Point[] = [];
+  for (let x = 0; x < M.W; x++) {
+    pave(x, ty);
+    ewRoad.push({ x, y: ty });
+    // Gentle drift that steers back toward the centre line.
+    const r = rng();
+    if (x < M.W - 1) {
+      if (r < 0.22 && ty > 3 && ty >= cy0 - 4) ty--;
+      else if (r > 0.78 && ty < M.H - 4 && ty <= cy0 + 4) ty++;
+      if (ty !== ewRoad[ewRoad.length - 1]!.y) pave(x, ty); // keep the road 8-connected → diagonal-free
+    }
+  }
+  let tx = cx0;
+  const nsRoad: Point[] = [];
+  for (let y = 0; y < M.H; y++) {
+    pave(tx, y);
+    nsRoad.push({ x: tx, y });
+    const r = rng();
+    if (y < M.H - 1) {
+      if (r < 0.22 && tx > 3 && tx >= cx0 - 4) tx--;
+      else if (r > 0.78 && tx < M.W - 4 && tx <= cx0 + 4) tx++;
+      if (tx !== nsRoad[nsRoad.length - 1]!.x) pave(tx, y);
+    }
+  }
 
-  // 4. Villages: clusters in grass/sparse clearings, buffered from dense forest.
+  // 4. Fire station at the crossroads (nearest road cell to the centre).
+  let station: Point = { x: cx0, y: cy0 };
+  let bestD = Number.POSITIVE_INFINITY;
+  for (const p of [...ewRoad, ...nsRoad]) {
+    const d = Math.abs(p.x - cx0) + Math.abs(p.y - cy0);
+    if (d < bestD) {
+      bestD = d;
+      station = p;
+    }
+  }
+  setBase(grid[station.y * M.W + station.x]!, 'road');
+
+  // 5. Villages grow along the roads — the road runs through the town, as on a
+  //    real map. Sites sit on the trunk network, spaced apart; the first stays
+  //    close to the station so the smallest sector has stakes.
   const villages: Point[] = [];
+  const roadCells = [...ewRoad, ...nsRoad].filter(
+    (p) => p.x > 2 && p.x < M.W - 3 && p.y > 2 && p.y < M.H - 3,
+  );
   let guard = 0;
-  while (villages.length < M.villageCount && guard++ < 500) {
-    const cx = 4 + Math.floor(rng() * (M.W - 8));
-    const cy = 3 + Math.floor(rng() * (M.H - 6));
-    const c = grid[cy * M.W + cx]!;
-    if (c.type !== 'grass' && c.type !== 'sparse') continue;
-    if (Math.abs(cx - station.x) + Math.abs(cy - station.y) < 6) continue;
-    if (villages.some((v) => Math.abs(v.x - cx) + Math.abs(v.y - cy) < 10)) continue;
-    let nearDense = false;
-    for (let dy = -2; dy <= 2 && !nearDense; dy++)
-      for (let dx = -2; dx <= 2; dx++) {
-        const nx = cx + dx;
-        const ny = cy + dy;
-        if (inBounds({ w: M.W, h: M.H }, nx, ny) && grid[ny * M.W + nx]!.type === 'dense') {
-          nearDense = true;
-          break;
-        }
-      }
-    if (nearDense) continue;
+  while (villages.length < M.villageCount && guard++ < 900) {
+    const at = roadCells[Math.floor(rng() * roadCells.length)]!;
+    const first = villages.length === 0;
+    const distStation = Math.max(Math.abs(at.x - station.x), Math.abs(at.y - station.y));
+    if (first && distStation > M.firstVillageMaxDist) continue;
+    if (distStation < 6) continue;
+    if (villages.some((v) => Math.abs(v.x - at.x) + Math.abs(v.y - at.y) < 12)) continue;
 
     const houses =
       M.villageMinHouses + Math.floor(rng() * (M.villageMaxHouses - M.villageMinHouses + 1));
     let placed = 0;
-    let ring = 0;
+    let ring = 1;
     while (placed < houses && ring < 4) {
       for (let dy = -ring; dy <= ring && placed < houses; dy++)
         for (let dx = -ring; dx <= ring && placed < houses; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
-          const nx = cx + dx;
-          const ny = cy + dy;
+          const nx = at.x + dx;
+          const ny = at.y + dy;
           if (!inBounds({ w: M.W, h: M.H }, nx, ny)) continue;
           const cell = grid[ny * M.W + nx]!;
-          if (cell.type === 'grass' || cell.type === 'sparse') {
-            cell.type = 'house';
+          if (cell.type === 'grass' || cell.type === 'sparse' || cell.type === 'dense') {
+            setBase(cell, 'house');
             cell.occupants =
               M.occupantsMin + Math.floor(rng() * (M.occupantsMax - M.occupantsMin + 1));
             placed++;
@@ -119,126 +164,234 @@ export function generateMap(seed: number): { grid: Cell[]; station: Point; villa
         }
       ring++;
     }
-    if (placed >= M.villageMinHouses) villages.push({ x: cx, y: cy });
-  }
-
-  // 5. Roads: L-shaped connections village → station (bridges cross the river).
-  for (const v of villages) {
-    let x = v.x;
-    let y = v.y;
-    const step = () => {
-      const cell = grid[y * M.W + x]!;
-      if (cell.type !== 'house' && cell.type !== 'water') cell.type = 'road';
-      if (cell.type === 'water') cell.type = 'road'; // bridge
-    };
-    while (x !== station.x) {
-      step();
-      x += x < station.x ? 1 : -1;
-    }
-    while (y !== station.y) {
-      step();
-      y += y < station.y ? 1 : -1;
+    if (placed >= M.villageMinHouses) villages.push({ x: at.x, y: at.y });
+    else {
+      // Roll back a site that couldn't grow (e.g. mid-river bridge).
+      for (let dy = -3; dy <= 3; dy++)
+        for (let dx = -3; dx <= 3; dx++) {
+          const nx = at.x + dx;
+          const ny = at.y + dy;
+          if (!inBounds({ w: M.W, h: M.H }, nx, ny)) continue;
+          const cell = grid[ny * M.W + nx]!;
+          if (cell.type === 'house') {
+            setBase(cell, 'grass');
+            cell.occupants = 0;
+          }
+        }
     }
   }
-  grid[station.y * M.W + station.x]!.type = 'road';
 
-  // 6. One pre-authored firebreak line near the largest dense block edge.
-  const fy = Math.floor(M.H * 0.25);
-  for (let x = 2; x < 10; x++) {
-    const cell = grid[fy * M.W + x]!;
-    if (cell.type === 'dense' || cell.type === 'sparse' || cell.type === 'grass')
-      cell.type = 'firebreak';
-  }
-
-  return { grid, station, villages };
-}
-
-/** Authored 2026 tutorial script (progression doc §1.3): near-road grass ignition, one wind shift, one relief rain. */
-function buildScript(s: GameState, seasonIndex: number, villages: Point[]): SeasonScript {
-  const rng = mulberry32(s.seed ^ (0xbeef + seasonIndex));
-  const params = seasons[seasonIndex]!;
-  const script: SeasonScript = { ignitions: [], windShifts: [], reliefRains: [] };
-
-  // Connected flammable components (grass/sparse/dense): a fire only matters
-  // if its site can reach a real fuel mass, not a pocket boxed in by barriers.
-  const comp = new Int32Array(s.w * s.h).fill(-1);
-  const compSize: number[] = [];
-  for (let start = 0; start < s.w * s.h; start++) {
-    const cell = s.grid[start]!;
-    if (
-      comp[start] !== -1 ||
-      (cell.type !== 'grass' && cell.type !== 'sparse' && cell.type !== 'dense')
-    )
-      continue;
-    const id = compSize.length;
-    let size = 0;
-    const stack = [start];
-    comp[start] = id;
-    while (stack.length > 0) {
-      const cur = stack.pop()!;
-      size++;
-      const cx = cur % s.w;
-      const cy = Math.floor(cur / s.w);
+  // 6. Reachability: every piece of land must be reachable from the station
+  //    (trucks cross water only on bridges). Carve road spurs — bridging the
+  //    river where needed — until no meaningful land pocket is cut off.
+  const passable = (t: TileType) => t !== 'water';
+  for (let round = 0; round < 6; round++) {
+    const reached = new Uint8Array(M.W * M.H);
+    const queue = [station.y * M.W + station.x];
+    reached[queue[0]!] = 1;
+    while (queue.length > 0) {
+      const cur = queue.pop()!;
+      const px = cur % M.W;
+      const py = Math.floor(cur / M.W);
       for (const [dx, dy] of [
         [1, 0],
         [-1, 0],
         [0, 1],
         [0, -1],
       ] as const) {
-        const nx = cx + dx;
-        const ny = cy + dy;
-        if (!inBounds(s, nx, ny)) continue;
-        const ni = ny * s.w + nx;
-        const nc = s.grid[ni]!;
-        if (
-          comp[ni] === -1 &&
-          (nc.type === 'grass' || nc.type === 'sparse' || nc.type === 'dense')
-        ) {
-          comp[ni] = id;
-          stack.push(ni);
+        const nx = px + dx;
+        const ny = py + dy;
+        if (!inBounds({ w: M.W, h: M.H }, nx, ny)) continue;
+        const ni = ny * M.W + nx;
+        if (!reached[ni] && passable(grid[ni]!.type)) {
+          reached[ni] = 1;
+          queue.push(ni);
         }
       }
     }
-    compSize.push(size);
+    // Largest unreachable land pocket, if any of meaningful size.
+    let pocket: Point | null = null;
+    let pocketSize = 0;
+    const seen = new Uint8Array(M.W * M.H);
+    for (let i = 0; i < M.W * M.H; i++) {
+      if (reached[i] || seen[i] || !passable(grid[i]!.type)) continue;
+      let size = 0;
+      const stack = [i];
+      seen[i] = 1;
+      const sample = { x: i % M.W, y: Math.floor(i / M.W) };
+      while (stack.length > 0) {
+        const cur = stack.pop()!;
+        size++;
+        const px = cur % M.W;
+        const py = Math.floor(cur / M.W);
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const) {
+          const nx = px + dx;
+          const ny = py + dy;
+          if (!inBounds({ w: M.W, h: M.H }, nx, ny)) continue;
+          const ni = ny * M.W + nx;
+          if (!seen[ni] && !reached[ni] && passable(grid[ni]!.type)) {
+            seen[ni] = 1;
+            stack.push(ni);
+          }
+        }
+      }
+      if (size > pocketSize) {
+        pocketSize = size;
+        pocket = sample;
+      }
+    }
+    if (!pocket || pocketSize < 6) break;
+    // Bridge from the nearest reached road cell to the pocket with an L-path.
+    let from: Point = station;
+    let fromD = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < M.W * M.H; i++) {
+      if (!reached[i] || grid[i]!.type !== 'road') continue;
+      const px = i % M.W;
+      const py = Math.floor(i / M.W);
+      const d = Math.abs(px - pocket.x) + Math.abs(py - pocket.y);
+      if (d < fromD) {
+        fromD = d;
+        from = { x: px, y: py };
+      }
+    }
+    let bx = from.x;
+    let by = from.y;
+    while (bx !== pocket.x) {
+      pave(bx, by);
+      bx += bx < pocket.x ? 1 : -1;
+    }
+    while (by !== pocket.y) {
+      pave(bx, by);
+      by += by < pocket.y ? 1 : -1;
+    }
+    pave(bx, by);
   }
 
-  // Ignition sites: grass/sparse tiles near a road, ≥ 8 tiles from any village.
+  // 7. One pre-authored firebreak line near the north dense block.
+  const fy = Math.floor(M.H * 0.25);
+  for (let x = 4; x < 13; x++) {
+    const cell = grid[fy * M.W + x]!;
+    if (cell.type === 'dense' || cell.type === 'sparse' || cell.type === 'grass')
+      setBase(cell, 'firebreak');
+  }
+
+  return { grid, station, villages };
+}
+
+function setBase(cell: Cell, type: TileType): void {
+  cell.type = type;
+  cell.baseType = type;
+}
+
+/** The active sector for a season: sized per pair, centered on the station, clamped to the world. */
+export function boundsForSeason(seasonIndex: number, station: Point): Bounds {
+  const pair = Math.min(Math.floor(seasonIndex / 2), sectorSizes.length - 1);
+  const [bw, bh] = sectorSizes[pair]!;
+  const x0 = Math.min(Math.max(0, Math.round(station.x - bw / 2)), M.W - bw);
+  const y0 = Math.min(Math.max(0, Math.round(station.y - bh / 2)), M.H - bh);
+  return { x0, y0, x1: x0 + bw, y1: y0 + bh };
+}
+
+/**
+ * Regrowth between seasons (gameplay doc §3.4): burnt ground returns as
+ * scarred grass, then sparse, then its base type, on a real-years clock.
+ * Pure function of burn age, so it is idempotent across season loads.
+ */
+function applyRegrowth(cell: Cell, year: number): void {
+  if (cell.burntYear <= 0) return;
+  const age = year - cell.burntYear;
+  if (cell.state === 'burnt') cell.state = 'unburnt';
+  const vegetation =
+    cell.baseType === 'dense' || cell.baseType === 'sparse' || cell.baseType === 'grass';
+  if (age >= RG.fullAfter) cell.type = cell.baseType;
+  else if (age >= RG.sparseAfter) cell.type = cell.baseType === 'dense' ? 'sparse' : cell.baseType;
+  else if (age >= RG.grassAfter)
+    // Only vegetation passes through the scarred-grass stage; roads, firebreaks
+    // and other infrastructure are simply restored (repaired) by the next season.
+    cell.type = vegetation ? 'grass' : cell.baseType;
+}
+
+/** Authored season script: staggered ignitions in viable fuel, one wind shift, relief rain per curve. */
+function buildScript(s: GameState, seasonIndex: number, villages: Point[]): SeasonScript {
+  const rng = mulberry32(s.seed ^ (0xbeef + seasonIndex));
+  const params = seasons[seasonIndex]!;
+  const script: SeasonScript = { ignitions: [], windShifts: [], reliefRains: [] };
+  const b = s.bounds;
+
+  // Connected flammable components within the sector: a fire only matters if
+  // its site can reach a real fuel mass, not a pocket boxed in by barriers.
+  const comp = new Int32Array(s.w * s.h).fill(-1);
+  const compSize: number[] = [];
+  const fuelType = (t: TileType) => t === 'grass' || t === 'sparse' || t === 'dense';
+  for (let sy = b.y0; sy < b.y1; sy++)
+    for (let sx = b.x0; sx < b.x1; sx++) {
+      const start = sy * s.w + sx;
+      if (comp[start] !== -1 || !fuelType(s.grid[start]!.type)) continue;
+      const id = compSize.length;
+      let size = 0;
+      const stack = [start];
+      comp[start] = id;
+      while (stack.length > 0) {
+        const cur = stack.pop()!;
+        size++;
+        const cx = cur % s.w;
+        const cy = Math.floor(cur / s.w);
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const) {
+          const nx = cx + dx;
+          const ny = cy + dy;
+          if (!inActive(s, nx, ny)) continue;
+          const ni = ny * s.w + nx;
+          if (comp[ni] === -1 && fuelType(s.grid[ni]!.type)) {
+            comp[ni] = id;
+            stack.push(ni);
+          }
+        }
+      }
+      compSize.push(size);
+    }
+
+  // Ignition sites: fuel tiles near a road, away from villages and the station,
+  // in continuous fuel connected to a real fuel mass — all within the sector.
   const candidates: Point[] = [];
-  for (let y = 1; y < s.h - 1; y++)
-    for (let x = 1; x < s.w - 1; x++) {
+  for (let y = b.y0 + 1; y < b.y1 - 1; y++)
+    for (let x = b.x0 + 1; x < b.x1 - 1; x++) {
       const c = s.grid[idx(s, x, y)]!;
       if (c.type !== 'grass' && c.type !== 'sparse') continue;
       const farFromVillages = villages.every((v) => Math.abs(v.x - x) + Math.abs(v.y - y) >= 8);
       if (!farFromVillages) continue;
       // Not on the station's doorstep — the parked engines would kill it in one tick.
       if (Math.abs(s.station.x - x) + Math.abs(s.station.y - y) < 10) continue;
-      // Continuous fuel around the site, so young fires creep instead of
-      // guttering out in scraps of grass between rock and water.
       let fuelAround = 0;
       for (let dy = -2; dy <= 2; dy++)
         for (let dx = -2; dx <= 2; dx++) {
           const nx = x + dx;
           const ny = y + dy;
-          if (!inBounds(s, nx, ny)) continue;
-          const type = s.grid[idx(s, nx, ny)]!.type;
-          if (type === 'grass' || type === 'sparse' || type === 'dense') fuelAround++;
+          if (inActive(s, nx, ny) && fuelType(s.grid[idx(s, nx, ny)]!.type)) fuelAround++;
         }
       if (fuelAround < 17) continue;
-      // The site's fuel mass must be large enough for the fire to matter.
       if ((compSize[comp[idx(s, x, y)]!] ?? 0) < 150) continue;
       let nearRoad = false;
       for (let dy = -3; dy <= 3 && !nearRoad; dy++)
         for (let dx = -3; dx <= 3; dx++)
-          if (inBounds(s, x + dx, y + dy) && s.grid[idx(s, x + dx, y + dy)]!.type === 'road') {
+          if (inActive(s, x + dx, y + dy) && s.grid[idx(s, x + dx, y + dy)]!.type === 'road') {
             nearRoad = true;
             break;
           }
       if (nearRoad) candidates.push({ x, y });
     }
 
-  // Staggered ignitions in separate regions — several small fires the player
-  // must divide attention between, not one blaze. First is called in at once.
-  // Spacing relaxes gradually (12 → 8 → 4 → any) rather than being abandoned.
+  // Staggered ignitions in separate regions — several fires the player must
+  // divide attention between. Spacing relaxes gradually (12 → 8 → 4 → any).
   const chosen: Point[] = [];
   for (const minDist of [12, 8, 4, 0]) {
     let attempts = 0;
@@ -249,7 +402,7 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
     }
     if (chosen.length >= params.scriptedIgnitions) break;
   }
-  while (chosen.length < params.scriptedIgnitions) chosen.push({ x: 5, y: 5 });
+  while (chosen.length < params.scriptedIgnitions) chosen.push({ x: b.x0 + 5, y: b.y0 + 5 });
   const stagger = Math.max(IG.staggerMin, IG.staggerBase - params.t * IG.staggerPerSeason);
   chosen.forEach((at, i) => {
     script.ignitions.push({ tick: IG.firstTick + i * stagger, x: at.x, y: at.y, done: false });
@@ -268,20 +421,42 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
   return script;
 }
 
-/** Create a fresh season. seasonIndex 0 = 2026. */
-export function createSeason(seed: number, seasonIndex = 0): GameState {
+/**
+ * Create a season. seasonIndex 0 = 2026 … 9 = 2070. Pass the previous season's
+ * grid as `carryGrid` to inherit the persistent world: scars regrow on a
+ * real-years clock, permanent conversions stay, transient fire state resets.
+ */
+export function createSeason(seed: number, seasonIndex = 0, carryGrid?: Cell[]): GameState {
   const params = seasons[seasonIndex];
   if (!params) throw new Error(`no season ${seasonIndex}`);
-  const { grid, station, villages } = generateMap(seed);
+  const { grid: freshGrid, station, villages } = generateMap(seed);
   const rng = mulberry32(seed ^ (0xf17e + seasonIndex * 101));
+
+  let grid = freshGrid;
+  if (carryGrid) {
+    if (carryGrid.length !== freshGrid.length)
+      throw new Error('carry grid does not match world size');
+    grid = carryGrid.map((c) => ({
+      ...c,
+      state: c.state === 'burning' ? ('burnt' as const) : c.state,
+      fuel: 0,
+      intensity: 0,
+      wetTimer: 0,
+      igniteAge: 0,
+      detected: false,
+    }));
+  }
+  for (const cell of grid) applyRegrowth(cell, params.year);
 
   const state: GameState = {
     seed,
     seasonYear: params.year,
+    seasonIndex,
     tick: 0,
     w: M.W,
     h: M.H,
     grid,
+    bounds: boundsForSeason(seasonIndex, station),
     wind: { dir: rng() * Math.PI * 2, str: params.windStr },
     dryness: params.dryness,
     spreadMult: params.spreadMult ?? 1,

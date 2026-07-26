@@ -16,12 +16,17 @@ export class MapViewport {
   private dragged = false;
   private downDistance = 0;
 
+  private baseW: number;
+  private baseH: number;
+
   constructor(
     private container: HTMLElement,
     private canvas: HTMLCanvasElement,
-    private baseW: number,
-    private baseH: number,
+    baseW: number,
+    baseH: number,
   ) {
+    this.baseW = baseW;
+    this.baseH = baseH;
     canvas.style.transformOrigin = '0 0';
     new ResizeObserver(() => this.refit()).observe(container);
     this.refit();
@@ -29,7 +34,12 @@ export class MapViewport {
     container.addEventListener('pointerdown', (e) => {
       container.setPointerCapture(e.pointerId);
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (this.pointers.size === 1) this.downDistance = 0;
+      if (this.pointers.size === 1) {
+        this.downDistance = 0;
+        // A fresh gesture: a stale drag flag (pinch, gutter release) must not
+        // swallow this tap if it turns out to be one.
+        this.dragged = false;
+      }
       if (this.pointers.size === 2) this.pinchDist = this.pinchDistance();
     });
     container.addEventListener('pointermove', (e) => {
@@ -72,6 +82,14 @@ export class MapViewport {
       },
       { passive: false },
     );
+  }
+
+  /** The map (sector) changed size — reset zoom and refit. */
+  setBase(w: number, h: number): void {
+    this.baseW = w;
+    this.baseH = h;
+    this.zoom = 1;
+    this.refit();
   }
 
   /** True (and resets) when the pointer sequence that just ended was a pan/pinch, not a tap. */

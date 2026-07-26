@@ -1,6 +1,6 @@
 import { truck as T } from './balance';
 import type { GameState, Point, Truck } from './state';
-import { cellAt, idx, inBounds } from './state';
+import { cellAt, idx, inActive } from './state';
 
 function moveCost(s: GameState, x: number, y: number): number {
   const speed = T.moveSpeed[cellAt(s, x, y).type];
@@ -9,7 +9,7 @@ function moveCost(s: GameState, x: number, y: number): number {
 
 /** A* over the move-cost grid. Returns the path excluding start, or [] if unreachable. */
 export function findPath(s: GameState, from: Point, to: Point): Point[] {
-  if (!inBounds(s, to.x, to.y) || moveCost(s, to.x, to.y) === Number.POSITIVE_INFINITY) return [];
+  if (!inActive(s, to.x, to.y) || moveCost(s, to.x, to.y) === Number.POSITIVE_INFINITY) return [];
   const n = s.w * s.h;
   const g = new Float64Array(n).fill(Number.POSITIVE_INFINITY);
   const prev = new Int32Array(n).fill(-1);
@@ -39,7 +39,7 @@ export function findPath(s: GameState, from: Point, to: Point): Point[] {
         if (dx === 0 && dy === 0) continue;
         const nx = cx + dx;
         const ny = cy + dy;
-        if (!inBounds(s, nx, ny)) continue;
+        if (!inActive(s, nx, ny)) continue;
         const ni = idx(s, nx, ny);
         if (closed[ni]) continue;
         const stepCost = moveCost(s, nx, ny) * (dx !== 0 && dy !== 0 ? Math.SQRT2 : 1);
@@ -72,7 +72,7 @@ function pathAdjacentTo(s: GameState, from: Point, x: number, y: number): Point[
       if (dx === 0 && dy === 0) continue;
       const nx = x + dx;
       const ny = y + dy;
-      if (!inBounds(s, nx, ny)) continue;
+      if (!inActive(s, nx, ny)) continue;
       if (from.x === nx && from.y === ny) return []; // already adjacent
       const burning = cellAt(s, nx, ny).state === 'burning';
       const p = findPath(s, from, { x: nx, y: ny });
@@ -142,7 +142,7 @@ function adjacentBurning(s: GameState, t: Truck): { x: number; y: number } | nul
       if (dx === 0 && dy === 0) continue;
       const nx = t.x + dx;
       const ny = t.y + dy;
-      if (!inBounds(s, nx, ny)) continue;
+      if (!inActive(s, nx, ny)) continue;
       const c = cellAt(s, nx, ny);
       if (c.state === 'burning' && (best === null || c.intensity > best.i))
         best = { x: nx, y: ny, i: c.intensity };
@@ -156,7 +156,7 @@ function adjacentToWaterOrStation(s: GameState, t: Truck): boolean {
     for (let dx = -1; dx <= 1; dx++) {
       const nx = t.x + dx;
       const ny = t.y + dy;
-      if (inBounds(s, nx, ny) && cellAt(s, nx, ny).type === 'water') return true;
+      if (inActive(s, nx, ny) && cellAt(s, nx, ny).type === 'water') return true;
     }
   return false;
 }

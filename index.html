@@ -14,7 +14,11 @@
     <div id="app">
       <div id="topbar">
         <div id="year"></div>
-        <div id="stats"><span id="hectares">0 ha burnt</span></div>
+        <div id="stats">
+          <span id="hectares">0 ha burnt</span>
+          <span id="animals" hidden></span>
+          <span id="houses" hidden></span>
+        </div>
         <div id="weather">
           <span id="windarrow">➤</span>
           <span id="windspeed"></span>
@@ -45,10 +49,18 @@
         </div>
       </div>
       <div id="version"></div>
+      <div id="briefing" hidden>
+        <h2 id="b-year"></h2>
+        <p id="b-growth" hidden>
+          The department has widened your sector — more forest, more people, yours to protect.
+        </p>
+        <p id="b-fact"></p>
+        <button id="btn-begin" type="button">Begin season</button>
+      </div>
       <div id="debrief" hidden>
-        <h2>Season over — the rains arrive</h2>
+        <h2 id="d-title">Season over — the rains arrive</h2>
         <div id="report"></div>
-        <p id="fact"></p>
+        <p id="d-campaign"></p>
         <button id="btn-restart" type="button">Continue</button>
       </div>
     </div>

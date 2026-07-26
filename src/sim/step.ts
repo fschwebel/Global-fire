@@ -1,7 +1,14 @@
-import { detection, habitatPerTile, ignitionSchedule, rain, windDriftPerTick } from './balance';
+import {
+  detection,
+  habitatPerTile,
+  ignitionSchedule,
+  rain,
+  regrowth,
+  windDriftPerTick,
+} from './balance';
 import { flammable, ignite, intensityCap, spreadProb } from './fire';
 import type { Command, GameEvent, GameState } from './state';
-import { cellAt, idx, inBounds } from './state';
+import { cellAt, idx, inActive } from './state';
 import { dispatchEngine, updateTrucks } from './units';
 
 function applyCommands(s: GameState, commands: Command[], events: GameEvent[]): void {
@@ -35,7 +42,7 @@ function nearRoadHouseOrTruck(s: GameState, x: number, y: number): boolean {
     for (let dx = -r; dx <= r; dx++) {
       const nx = x + dx;
       const ny = y + dy;
-      if (!inBounds(s, nx, ny)) continue;
+      if (!inActive(s, nx, ny)) continue;
       const type = s.grid[idx(s, nx, ny)]!.type;
       if (type === 'road' || type === 'house') return true;
     }
@@ -86,17 +93,18 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
       }
     }
     if (s.randomIgnitionRate > 0 && s.rng() < s.randomIgnitionRate) {
-      const x = Math.floor(s.rng() * s.w);
-      const y = Math.floor(s.rng() * s.h);
+      const x = s.bounds.x0 + Math.floor(s.rng() * (s.bounds.x1 - s.bounds.x0));
+      const y = s.bounds.y0 + Math.floor(s.rng() * (s.bounds.y1 - s.bounds.y0));
       const c = cellAt(s, x, y);
       if (flammable(c)) ignite(s, c, false);
     }
   }
 
   // Spread: roll from current burning state (order-independent), apply after.
+  // Fire exists only inside the active sector; its edge is a hard boundary.
   const ignitions: { x: number; y: number; detected: boolean }[] = [];
-  for (let y = 0; y < s.h; y++)
-    for (let x = 0; x < s.w; x++) {
+  for (let y = s.bounds.y0; y < s.bounds.y1; y++)
+    for (let x = s.bounds.x0; x < s.bounds.x1; x++) {
       const c = s.grid[idx(s, x, y)]!;
       if (!flammable(c)) continue;
       for (let dy = -1; dy <= 1; dy++)
@@ -104,7 +112,7 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
           if (dx === 0 && dy === 0) continue;
           const bx = x - dx;
           const by = y - dy;
-          if (!inBounds(s, bx, by)) continue;
+          if (!inActive(s, bx, by)) continue;
           const b = s.grid[idx(s, bx, by)]!;
           if (b.state !== 'burning') continue;
           if (s.rng() < spreadProb(s, b, c, dx, dy)) {
@@ -115,7 +123,7 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
         }
     }
 
-  // Burning cells: intensity builds, fuel depletes → burnt (+ stats).
+  // Burning cells: intensity builds, fuel depletes → burnt (+ stats, history).
   for (const c of s.grid) {
     if (c.state !== 'burning') continue;
     c.intensity = Math.min(intensityCap(c), c.intensity + 1);
@@ -124,9 +132,16 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
     if (c.fuel <= 0) {
       c.state = 'burnt';
       c.intensity = 0;
+      c.burntYear = s.seasonYear;
       s.stats.hectaresBurnt += 1;
       s.stats.animalsKilled += habitatPerTile[c.type] ?? 0;
-      if (c.type === 'house') s.stats.housesLost += 1;
+      if (c.type === 'house') {
+        s.stats.housesLost += 1;
+        c.baseType = 'grass'; // homes are not rebuilt; the village shrinks
+        c.occupants = 0;
+      } else if (c.type === 'dense' && s.rng() < regrowth.denseConversionChance) {
+        c.baseType = 'grass'; // high-severity burn: permanent conversion
+      }
     }
   }
 
@@ -143,8 +158,8 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
 
   // Detection: a fire is reported by age, by proximity call-in, or by spreading
   // from an already-detected cell (handled at ignition).
-  for (let y = 0; y < s.h; y++)
-    for (let x = 0; x < s.w; x++) {
+  for (let y = s.bounds.y0; y < s.bounds.y1; y++)
+    for (let x = s.bounds.x0; x < s.bounds.x1; x++) {
       const c = s.grid[idx(s, x, y)]!;
       if (c.state !== 'burning' || c.detected) continue;
       if (c.igniteAge >= detection.DETECT_DELAY || nearRoadHouseOrTruck(s, x, y)) {
@@ -156,7 +171,7 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
             const ny = y + dy;
             if (
               (dx !== 0 || dy !== 0) &&
-              inBounds(s, nx, ny) &&
+              inActive(s, nx, ny) &&
               s.grid[idx(s, nx, ny)]!.state === 'burning' &&
               s.grid[idx(s, nx, ny)]!.detected &&
               !(nx === x && ny === y)

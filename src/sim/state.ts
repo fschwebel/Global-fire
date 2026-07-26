@@ -14,6 +14,8 @@ export type CellState = 'unburnt' | 'burning' | 'burnt';
 
 export interface Cell {
   type: TileType;
+  /** What this ground regrows toward (burnt houses and converted dense forest change it permanently). */
+  baseType: TileType;
   state: CellState;
   /** Remaining burn duration in ticks while burning. */
   fuel: number;
@@ -27,11 +29,21 @@ export interface Cell {
   igniteAge: number;
   /** A burning cell renders only once detected. */
   detected: boolean;
+  /** Season year this cell last burnt out (0 = never) — drives regrowth and scar tint. */
+  burntYear: number;
 }
 
 export interface Point {
   x: number;
   y: number;
+}
+
+/** Active sector rectangle within the world grid; x1/y1 exclusive. */
+export interface Bounds {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
 }
 
 export interface Truck {
@@ -91,10 +103,14 @@ export interface SeasonScript {
 export interface GameState {
   seed: number;
   seasonYear: number;
+  /** 0–9 (2026 … 2070). */
+  seasonIndex: number;
   tick: number;
   w: number;
   h: number;
   grid: Cell[];
+  /** The playable sector this season — grows every two seasons. */
+  bounds: Bounds;
   wind: Wind;
   dryness: number;
   /** Per-season brake on spread probability (1 = neutral). */
@@ -131,6 +147,11 @@ export function idx(s: { w: number }, x: number, y: number): number {
 
 export function inBounds(s: { w: number; h: number }, x: number, y: number): boolean {
   return x >= 0 && x < s.w && y >= 0 && y < s.h;
+}
+
+/** Inside this season's active sector — fire, orders, and detection stop at its edge. */
+export function inActive(s: { bounds: Bounds }, x: number, y: number): boolean {
+  return x >= s.bounds.x0 && x < s.bounds.x1 && y >= s.bounds.y0 && y < s.bounds.y1;
 }
 
 export function cellAt(s: GameState, x: number, y: number): Cell {

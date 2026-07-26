@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { seasons } from '../src/sim/balance';
 import { createSeason } from '../src/sim/scenario';
-import type { Command, GameState } from '../src/sim/state';
+import type { Cell, Command, GameState } from '../src/sim/state';
 import { step } from '../src/sim/step';
 
 function hashState(s: GameState): string {
@@ -207,6 +207,256 @@ describe('trucks', () => {
   });
 });
 
+describe('map realism', () => {
+  it('trunk roads leave the world at all four edges', () => {
+    for (const seed of [42, 7, 99]) {
+      const s = createSeason(seed, 9); // full world sector
+      const isRoad = (x: number, y: number) => s.grid[y * s.w + x]!.type === 'road';
+      expect([...Array(s.h).keys()].some((y) => isRoad(0, y))).toBe(true);
+      expect([...Array(s.h).keys()].some((y) => isRoad(s.w - 1, y))).toBe(true);
+      expect([...Array(s.w).keys()].some((x) => isRoad(x, 0))).toBe(true);
+      expect([...Array(s.w).keys()].some((x) => isRoad(x, s.h - 1))).toBe(true);
+    }
+  });
+
+  it('roads run through towns: houses cluster around a road cell', () => {
+    for (const seed of [42, 7, 99]) {
+      const s = createSeason(seed, 9);
+      let villages = 0;
+      for (let y = 0; y < s.h; y++)
+        for (let x = 0; x < s.w; x++) {
+          if (s.grid[y * s.w + x]!.type !== 'road') continue;
+          let houses = 0;
+          for (let dy = -3; dy <= 3; dy++)
+            for (let dx = -3; dx <= 3; dx++) {
+              const nx = x + dx;
+              const ny = y + dy;
+              if (nx >= 0 && ny >= 0 && nx < s.w && ny < s.h)
+                if (s.grid[ny * s.w + nx]!.type === 'house') houses++;
+            }
+          if (houses >= 6) villages++;
+        }
+      expect(villages).toBeGreaterThan(0);
+    }
+  });
+
+  it('every piece of land is reachable from the station (bridges where needed)', () => {
+    for (const seed of [42, 7, 99, 1234, 555]) {
+      const s = createSeason(seed, 9);
+      const reached = new Uint8Array(s.w * s.h);
+      const start = s.station.y * s.w + s.station.x;
+      reached[start] = 1;
+      const queue = [start];
+      while (queue.length > 0) {
+        const cur = queue.pop()!;
+        const px = cur % s.w;
+        const py = Math.floor(cur / s.w);
+        for (const [dx, dy] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ] as const) {
+          const nx = px + dx;
+          const ny = py + dy;
+          if (nx < 0 || ny < 0 || nx >= s.w || ny >= s.h) continue;
+          const ni = ny * s.w + nx;
+          if (!reached[ni] && s.grid[ni]!.type !== 'water') {
+            reached[ni] = 1;
+            queue.push(ni);
+          }
+        }
+      }
+      let unreachable = 0;
+      for (let i = 0; i < s.w * s.h; i++)
+        if (!reached[i] && s.grid[i]!.type !== 'water') unreachable++;
+      // Tiny slivers (<6 cells) may remain by design; nothing meaningful is cut off.
+      expect(unreachable).toBeLessThan(6);
+    }
+  });
+});
+
+describe('campaign', () => {
+  it('the sector grows every two seasons, reaching the full world by 2065', () => {
+    let prevArea = 0;
+    for (let idx = 0; idx <= 9; idx++) {
+      const s = createSeason(42, idx);
+      const area = (s.bounds.x1 - s.bounds.x0) * (s.bounds.y1 - s.bounds.y0);
+      if (idx === 0) expect(area).toBeLessThan(s.w * s.h);
+      else if (idx % 2 === 0) expect(area).toBeGreaterThan(prevArea);
+      else expect(area).toBe(prevArea);
+      prevArea = area;
+    }
+    const last = createSeason(42, 9);
+    expect(last.bounds.x1 - last.bounds.x0).toBe(last.w);
+    expect(last.bounds.y1 - last.bounds.y0).toBe(last.h);
+  });
+
+  it('fire never crosses the sector edge', () => {
+    const s = createSeason(42, 0);
+    for (let i = 0; i < seasons[0]!.seasonLen + 200 && !s.ended; i++) step(s);
+    expect(s.stats.hectaresBurnt).toBeGreaterThan(0);
+    for (let y = 0; y < s.h; y++)
+      for (let x = 0; x < s.w; x++) {
+        const outside = x < s.bounds.x0 || x >= s.bounds.x1 || y < s.bounds.y0 || y >= s.bounds.y1;
+        if (outside) expect(s.grid[y * s.w + x]!.state).toBe('unburnt');
+      }
+  });
+
+  it('scars carry over, regrow to grass, and fully recover after 12+ years', () => {
+    const a = createSeason(42, 0);
+    for (let i = 0; i < seasons[0]!.seasonLen + 200 && !a.ended; i++) step(a);
+    const burntIdx: number[] = [];
+    a.grid.forEach((c, i) => {
+      if (c.state === 'burnt') burntIdx.push(i);
+    });
+    expect(burntIdx.length).toBeGreaterThan(0);
+
+    const b = createSeason(42, 1, a.grid); // 2030: 4 years later → scarred grass
+    for (const i of burntIdx) {
+      const c = b.grid[i]!;
+      expect(c.state).toBe('unburnt');
+      expect(c.burntYear).toBe(2026);
+      const vegetation =
+        c.baseType === 'dense' || c.baseType === 'sparse' || c.baseType === 'grass';
+      // Vegetation returns as scarred grass; infrastructure (roads, firebreaks)
+      // is repaired to its base type by the next season.
+      if (vegetation) expect(c.type).toBe('grass');
+      else expect(c.type).toBe(c.baseType);
+    }
+
+    const d = createSeason(42, 3, b.grid); // 2040: 14 years later → base type restored
+    for (const i of burntIdx) {
+      const c = d.grid[i]!;
+      expect(c.type).toBe(c.baseType);
+    }
+  });
+
+  it('all ten seasons create and run, carrying the world forward', () => {
+    let grid: Cell[] | undefined;
+    for (let idx = 0; idx <= 9; idx++) {
+      const s = createSeason(42, idx, grid);
+      expect(s.seasonYear).toBe(seasons[idx]!.year);
+      expect(s.script.ignitions.length).toBe(seasons[idx]!.scriptedIgnitions);
+      for (let i = 0; i < 120 && !s.ended; i++) step(s);
+      grid = s.grid;
+    }
+  });
+
+  it('every scripted ignition site lies inside its season sector', () => {
+    for (let idx = 0; idx <= 9; idx++) {
+      const s = createSeason(42, idx);
+      for (const ig of s.script.ignitions) {
+        expect(ig.x).toBeGreaterThanOrEqual(s.bounds.x0);
+        expect(ig.x).toBeLessThan(s.bounds.x1);
+        expect(ig.y).toBeGreaterThanOrEqual(s.bounds.y0);
+        expect(ig.y).toBeLessThan(s.bounds.y1);
+      }
+    }
+  });
+
+  it('the sector always contains the station and at least one village', () => {
+    for (let idx = 0; idx <= 9; idx++) {
+      const s = createSeason(42, idx);
+      expect(
+        s.station.x >= s.bounds.x0 &&
+          s.station.x < s.bounds.x1 &&
+          s.station.y >= s.bounds.y0 &&
+          s.station.y < s.bounds.y1,
+      ).toBe(true);
+      let housesInside = 0;
+      for (let y = s.bounds.y0; y < s.bounds.y1; y++)
+        for (let x = s.bounds.x0; x < s.bounds.x1; x++)
+          if (s.grid[y * s.w + x]!.type === 'house') housesInside++;
+      expect(housesInside).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  it('dispatch refuses targets outside the active sector', () => {
+    const s = createSeason(42, 0);
+    // The 2026 sector is a strict crop, so a world corner is outside it.
+    expect(s.bounds.x0).toBeGreaterThan(0);
+    const events = step(s, [{ type: 'dispatch', x: 0, y: 0 }]);
+    expect(events.some((e) => e.type === 'engineDispatched')).toBe(false);
+  });
+
+  it('regrowth staging: grass at 4 years, sparse at 9, restored at 14', () => {
+    const base = createSeason(42, 0);
+    // Hand-stamp a dense cell inside every sector as burnt in 2026.
+    const target = base.grid.findIndex(
+      (c, i) =>
+        c.type === 'dense' &&
+        i % base.w >= base.bounds.x0 &&
+        i % base.w < base.bounds.x1 &&
+        Math.floor(i / base.w) >= base.bounds.y0 &&
+        Math.floor(i / base.w) < base.bounds.y1,
+    );
+    expect(target).toBeGreaterThanOrEqual(0);
+    base.grid[target]!.state = 'burnt';
+    base.grid[target]!.burntYear = 2026;
+
+    const y2030 = createSeason(42, 1, base.grid);
+    expect(y2030.grid[target]!.type).toBe('grass');
+    const y2035 = createSeason(42, 2, y2030.grid);
+    expect(y2035.grid[target]!.type).toBe('sparse');
+    const y2040 = createSeason(42, 3, y2035.grid);
+    expect(y2040.grid[target]!.type).toBe('dense');
+  });
+
+  it('burnt houses never come back: the village shrinks for good', () => {
+    const base = createSeason(42, 0);
+    const houseIdx = base.grid.findIndex((c) => c.type === 'house');
+    expect(houseIdx).toBeGreaterThanOrEqual(0);
+    const cell = base.grid[houseIdx]!;
+    cell.state = 'burnt';
+    cell.burntYear = 2026;
+    cell.baseType = 'grass'; // stamped at burnout in step()
+    cell.occupants = 0;
+    const later = createSeason(42, 5, base.grid); // 2050, 24 years on
+    expect(later.grid[houseIdx]!.type).toBe('grass');
+    expect(later.grid[houseIdx]!.occupants).toBe(0);
+  });
+
+  it('climate escalation: 2070 unfought burns far more than 2026 (same seed)', () => {
+    const early = createSeason(42, 0);
+    for (let i = 0; i < seasons[0]!.seasonLen + 200 && !early.ended; i++) step(early);
+    const late = createSeason(42, 9);
+    for (let i = 0; i < seasons[9]!.seasonLen + 200 && !late.ended; i++) step(late);
+    expect(late.stats.hectaresBurnt).toBeGreaterThan(early.stats.hectaresBurnt);
+  });
+});
+
+describe('campaign save', () => {
+  it('round-trips seed, progress, totals, and burn history', async () => {
+    const store = new Map<string, string>();
+    globalThis.localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+      clear: () => store.clear(),
+      key: () => null,
+      length: 0,
+    } as Storage;
+    const { saveCampaign, loadCampaign, clearCampaign } = await import('../src/game/save');
+
+    const s = createSeason(42, 0);
+    for (let i = 0; i < seasons[0]!.seasonLen + 200 && !s.ended; i++) step(s);
+    const scarsBefore = s.grid.filter((c) => c.burntYear > 0).length;
+    expect(scarsBefore).toBeGreaterThan(0);
+
+    saveCampaign(42, 1, s.stats, s.grid);
+    const loaded = loadCampaign();
+    expect(loaded).not.toBeNull();
+    expect(loaded!.seed).toBe(42);
+    expect(loaded!.seasonIndex).toBe(1);
+    expect(loaded!.campaign).toEqual(s.stats);
+    expect(loaded!.scars.length).toBe(scarsBefore);
+
+    clearCampaign();
+    expect(loadCampaign()).toBeNull();
+  });
+});
+
 describe('dispatch (measure-based orders)', () => {
   function dispatchedId(s: GameState, cmd: Command): number | undefined {
     const events = step(s, [cmd]);
@@ -217,19 +467,19 @@ describe('dispatch (measure-based orders)', () => {
   it('an unpinned dispatch sends the closest available engine', () => {
     const s = createSeason(42, 0);
     const t2 = s.trucks[1]!;
-    // Separate the engines: engine 2 far away in a corner.
-    t2.x = 2;
-    t2.y = 2;
-    const target = { x: Math.min(s.w - 2, s.trucks[0]!.x + 4), y: s.trucks[0]!.y };
+    // Separate the engines: engine 2 far away in the sector corner.
+    t2.x = s.bounds.x0 + 1;
+    t2.y = s.bounds.y0 + 1;
+    const target = { x: Math.min(s.bounds.x1 - 2, s.trucks[0]!.x + 4), y: s.trucks[0]!.y };
     expect(dispatchedId(s, { type: 'dispatch', x: target.x, y: target.y })).toBe(1);
   });
 
   it('a pinned dispatch overrides proximity', () => {
     const s = createSeason(42, 0);
     const t2 = s.trucks[1]!;
-    t2.x = 2;
-    t2.y = 2;
-    const target = { x: Math.min(s.w - 2, s.trucks[0]!.x + 4), y: s.trucks[0]!.y };
+    t2.x = s.bounds.x0 + 1;
+    t2.y = s.bounds.y0 + 1;
+    const target = { x: Math.min(s.bounds.x1 - 2, s.trucks[0]!.x + 4), y: s.trucks[0]!.y };
     expect(dispatchedId(s, { type: 'dispatch', x: target.x, y: target.y, truckId: 2 })).toBe(2);
   });
 

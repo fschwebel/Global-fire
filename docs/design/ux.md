@@ -233,7 +233,7 @@ After the ending: *"This forest is invented. The trend is not."* → three actio
 ### Accessibility (ship requirements, not stretch goals)
 
 - [ ] Pause available at any moment, including during alerts; auto-pause on reveals and tab blur
-- [ ] Speeds: pause / 1× / 2× only — never enough speed to skip past consequence moments
+- [ ] Speeds: pause / play only — never enough speed to skip past consequence moments; a quiet valley pulls the next fire forward instead
 - [ ] Reduced-motion mode: haze drift frozen, ember particles minimized, camera cuts instead of eases; all information preserved
 - [ ] Text size: 3 steps, HUD reflows; minimum body size 16 px equivalent
 - [ ] Audio: separate music / SFX / ambience sliders; **captioned audio cues** ("[radio static]", "[wind rising]") — the soundscape carries meaning, so it must have a visual twin

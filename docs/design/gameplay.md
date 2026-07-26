@@ -1,6 +1,6 @@
 # Gameplay Systems
 
-> **Canon note** (binding, from [`../PLAN.md`](../PLAN.md) §2): campaign of **ten seasons — 2026, 2030, then every five years to 2070** (`t = seasonIndex`, 0–9); 4–5 real years pass between consecutive seasons · one persistent 48×32 map, 1 tile = 1 ha · 2 Hz fixed ticks, square grid, Moore-8, double-buffered, seeded PRNG · no game-over/stars/grades; internal Stewardship Score only · deterministic firefighter deaths · warning-time evacuation mortality · unlock-season tools granted free · every number below is a **v0 value to playtest**, living in `balance.ts` — tuning never touches sim code.
+> **Canon note** (binding, from [`../PLAN.md`](../PLAN.md) §2): campaign of **ten seasons — 2026, 2030, then every five years to 2070** (`t = seasonIndex`, 0–9); 4–5 real years pass between consecutive seasons · one persistent 60×40 world, 1 tile = 1 ha, played as a centered sector the department widens every two seasons (44×30 → 60×40) · 800 ms fixed ticks, square grid, Moore-8, double-buffered, seeded PRNG · no game-over/stars/grades; internal Stewardship Score only · deterministic firefighter deaths · warning-time evacuation mortality · unlock-season tools granted free · every number below is a **v0 value to playtest**, living in `balance.ts` — tuning never touches sim code.
 
 ---
 
@@ -8,17 +8,17 @@
 
 ### 1.1 Timing model: fixed-tick sim, real-time presentation, pausable
 
-**A discrete tick-based simulation (2 ticks/second) rendered in real time, with tactical pause and 2× fast-forward.**
+**A discrete tick-based simulation (800 ms ticks) rendered in real time, with tactical pause.**
 
 | Option | Verdict |
 |---|---|
 | Pure turn-based | Rejected. Kills the dread that carries the message — fire must visibly *outrun* you. |
 | Continuous per-frame physics | Rejected. Non-deterministic across frame rates, hard to balance, overkill. |
-| **Fixed ticks + real-time render + pause** | **Chosen.** Deterministic and unit-testable (`step(state) → state` is pure), trivially cheap (1,536 cells at 2 Hz), decoupled from 60 fps rendering, and pause gives accessibility without removing tension — the fire resumes the moment you do. |
+| **Fixed ticks + real-time render + pause** | **Chosen.** Deterministic and unit-testable (`step(state) → state` is pure), trivially cheap (≤2,400 cells at 1.25 Hz), decoupled from 60 fps rendering, and pause gives accessibility without removing tension — the fire resumes the moment you do. |
 
-- Tick length **500 ms**. All rates below are per tick unless stated.
+- Tick length **800 ms**. All rates below are per tick unless stated.
 - Orders may be issued while paused (tactical pause, à la *RimWorld* crises). Auto-pause on: new fire detected, unit lost, village ignited, metric reveal — each doubles as a camera beat.
-- 2× fast-forward for cleanup once fires are contained. No 4× (consequence moments must not be skippable).
+- Time controls are pause/play only — no fast-forward (consequence moments must not be skippable); a quiet valley instead pulls the next scheduled ignition forward.
 
 ### 1.2 Three nested loops
 
@@ -61,8 +61,8 @@ Each tick, a BURNING cell: `intensity = min(intensityCap[type], intensity + 1)`;
 | Tile type | fuel (ticks) v0 | intensityCap v0 |
 |---|---|---|
 | Dense forest | 8 | 9 |
-| Sparse forest | 5 | 6 |
-| Grassland | 2 | 4 |
+| Sparse forest | 6 | 6 |
+| Grassland | 3 | 4 |
 | House | 6 | 7 |
 
 Grassland: fast-moving, weak, easy to stop. Dense forest: slow, ferocious, truck-resistant. That asymmetry produces most of the tactical decisions.
@@ -88,7 +88,7 @@ P(ignite C from B) = P_BASE
 | `fuelFactor` | dense 1.3 · sparse 1.0 · grass 1.5 · house 1.1 · road/firebreak 0.05 · water/burnt 0 | Roads slow fire but don't fully stop it |
 | `moistureFactor` | `0.35 + 1.05 × dryness`, dryness ∈ [0,1] | Dryness is *the* climate lever, set per season (§7.1) |
 | `windFactor` | `clamp(1 + windStr × cos θ, 0.15, 1 + windStr)`; θ = angle wind vs. B→C; `windStr` 0.2 (2026) → 1.4 (2070) | Downwind up to ~2.4×; upwind floor keeps fronts alive |
-| `intensityFactor` | `clamp(B.intensity / 6, 0.4, 1.4)` | Young fires creep; established fires leap |
+| `intensityFactor` | `clamp(B.intensity / 6, 0.55, 1.4)` | Floor high enough that young fires creep rather than gutter out |
 | `diagFactor` | 0.7 diagonal, 1.0 cardinal | ≈ 1/√2 distance correction |
 | `wetFactor` | 0.1 while `C.wetTimer > 0`, else 1.0 | Pre-wetting and water drops |
 | `slopeFactor` | uphill 1.3 · flat 1.0 · downhill 0.7 | Only if the elevation stretch ships |
@@ -108,13 +108,13 @@ Spotting is why firebreaks and rivers stop being absolute safety in later season
 
 ### 2.6 Ignition sources
 
-Per season: an authored script (`ignitionsScripted`: fixed ticks + regions) plus a background rate (`P_RANDOM_IGNITION` per tick anywhere flammable; flavour rotates: lightning, powerline, negligence). 2026: 1 scripted, no random. 2070: 4 scripted + 0.004/tick.
+Per season: an authored script (staggered ~90 ticks apart in the tutorial, compressing as seasons harden; a quiet valley pulls the next ignition forward) plus a background rate (`P_RANDOM_IGNITION` per tick anywhere flammable in the sector). 2026: 3 scripted, no random. 2070: 6 scripted + 0.004/tick. Early seasons also carry a `spreadMult` brake (0.72 / 0.85 / 0.95 for 2026 / 2030 / 2035).
 
 ### 2.7 Detection
 
 A new fire is **simulated but not shown**. It is *reported* (alarm + camera pan + rendered) at the first of:
 
-- `age ≥ DETECT_DELAY` (v0 **14 ticks** = 7 s — typically 6–12 cells by then), or
+- `age ≥ DETECT_DELAY` (v0 **10 ticks** = 8 s), or
 - it enters a watch tower's radius → reported at age ≤ 2 ticks (1–2 cells), or
 - it comes within 6 tiles of any truck, house, or road (people call it in).
 
@@ -142,7 +142,7 @@ function step(state):
   swap(state, next)
 ```
 
-Cost: 1,536 cells × ≤ 8 neighbour checks at 2 Hz — microseconds. Rendering is the only real performance concern (see tech-stack doc §6).
+Cost: up to 2,400 cells (only the active sector is stepped) × ≤ 8 neighbour checks at 1.25 Hz — microseconds. Rendering is the only real performance concern (see tech-stack doc §6).
 
 ---
 
@@ -150,7 +150,7 @@ Cost: 1,536 cells × ≤ 8 neighbour checks at 2 Hz — microseconds. Rendering 
 
 ### 3.1 One persistent map
 
-- **48 × 32 = 1,536 tiles, 1 tile = 1 ha** (100 m × 100 m) → a ~4.8 × 3.2 km valley. Fits one screen at 24–32 px/tile on desktop; light pinch-zoom on mobile. One screen = the whole crisis is always legible.
+- **60 × 40 = 2,400 tiles, 1 tile = 1 ha** (100 m × 100 m) → a 6 × 4 km world. Each season plays a centered **sector**: 44×30 in 2026, widened every two seasons to the full world by 2065. The active sector always fits one screen (pan/zoom on mobile) — the whole crisis stays legible; land beyond the sector is simply not yours yet.
 - **One curated procedural seed for the entire campaign.** Seasons are ignition/weather scripts on the same map. Burn scars, regrowth across the 4–5-year gaps, and the creeping WUI development (fully arrived by 2050) all accumulate on it — the map is the campaign's diary (see ux doc §1.6).
 
 ### 3.2 Tile types
@@ -177,7 +177,7 @@ Cost: 1,536 cells × ≤ 8 neighbour checks at 2 Hz — microseconds. Rendering 
 
 ### 3.4 Scars and regrowth (applied across the gap between seasons)
 
-Burnt cells regrow on a real-years clock, advanced by the 4–5 years that pass between seasons: ash → grassland (+2 yr, with a visible scar tint) → sparse forest (+6 yr) → young dense (+12 yr) → mature dense (+20 yr). So last season's burn returns as scarred grass next season, and a burn stays visible on the map for three to four seasons — the diary effect. Cells burnt at intensity ≥ 8 roll **25 % permanent conversion** to grassland/shrub that never regrows (habitat and fuel both reduced — a scarred map is genuinely a bit safer, as in reality, which keeps bad seasons from snowballing; the permanent conversions become plainly visible by 2060).
+Burnt vegetation regrows on a real-years clock, advanced by the 4–5 years that pass between seasons: ash → scarred grassland (+2 yr; the ash tint stays visible ~9 yr) → sparse (+6 yr, dense base only) → original type (+12 yr). Infrastructure (roads, firebreaks) is repaired to its base type by the next season. Dense forest that burns out rolls **25 % permanent conversion** to grassland. Burnt houses are never rebuilt: the tile reverts to grass, occupants zero — the village shrinks. A scarred map carries less fuel, which keeps bad seasons from snowballing.
 
 ---
 
@@ -196,9 +196,9 @@ Burnt cells regrow on a real-years clock, advanced by the 4–5 years that pass 
 | Stat | v0 |
 |---|---|
 | Cost | 40 (mid-season emergency 50); 2 granted free in 2026 |
-| Move | road 4 tiles/tick · grass/sparse 1.5 · dense 0.75 · never water |
-| Extinguish | 1 adjacent burning cell (range 1); **−3 intensity/tick** (net −2 vs. the +1 regrowth); at intensity 0 → WET (wetTimer 20) |
-| Water | capacity **24**; 1 unit per extinguish-tick; refill **4/tick** adjacent to water or station |
+| Move | road 5.5 tiles/tick · grass/sparse 2.2 · dense 1.1 · never water |
+| Extinguish | 1 adjacent burning cell (range 1, own tile first if standing in fire); **−4 intensity/tick** (net −3); at intensity 0 → WET (wetTimer 40 — fought ground holds) |
+| Water | capacity **30**; 1 unit per extinguish-tick; refill **6/tick** adjacent to water or station |
 | Pre-wet | 2 water → adjacent unburnt cell WET (wetTimer 30) — defensive lines |
 | Crew | 4 firefighters (danger rule below) |
 
