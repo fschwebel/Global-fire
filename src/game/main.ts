@@ -90,6 +90,8 @@ function setTool(tool: Tool): void {
   if (armedTool === 'bomber' && tool !== 'bomber') clearBomberAnchor();
   armedTool = tool;
   if (tool !== 'engine') pinnedTruckId = null;
+  renderer.setHighlightTowers(tool === 'tower');
+  if (tool !== 'tower') renderer.setTowerCursor(null);
   hud.setTool(tool);
 }
 
@@ -244,6 +246,10 @@ mapwrap.addEventListener('click', (ev) => {
       break;
     }
     case 'bomber':
+      if (state.script.drought?.done) {
+        hud.notify('The drought has grounded the bombers — there is no water to drop.');
+        break;
+      }
       // Nothing ready must not swallow a two-click order in silence.
       if (!state.bombers.some((b) => b.state === 'ready')) {
         hud.notify('No bomber ready — rearming beyond the valley.');
@@ -291,6 +297,10 @@ mapwrap.addEventListener('click', (ev) => {
 // Aiming preview: with an anchor set, the exact line the bomber would lay
 // follows the pointer.
 mapwrap.addEventListener('pointermove', (ev) => {
+  if (armedTool === 'tower') {
+    renderer.setTowerCursor(cellFromEvent(ev));
+    return;
+  }
   if (armedTool !== 'bomber' || !bomberAnchor) return;
   const cell = cellFromEvent(ev);
   if (!cell || (cell.x === bomberAnchor.x && cell.y === bomberAnchor.y)) {
@@ -302,6 +312,7 @@ mapwrap.addEventListener('pointermove', (ev) => {
 
 mapwrap.addEventListener('pointerleave', () => {
   if (armedTool === 'bomber' && bomberAnchor) renderer.setDropPreview([bomberAnchor]);
+  if (armedTool === 'tower') renderer.setTowerCursor(null);
 });
 
 mapwrap.addEventListener('contextmenu', (ev) => {

@@ -660,7 +660,9 @@ export function createSeason(
     towers: (carryTowers ?? []).map((t) => ({ ...t })),
     towersAvailable: Math.max(
       0,
-      (params.year >= unlocks.towers ? tower.count : 0) - (carryTowers?.length ?? 0),
+      (params.year >= unlocks.towers
+        ? tower.count + Math.floor((params.year - unlocks.towers) / 10) * tower.perDecade
+        : 0) - (carryTowers?.length ?? 0),
     ),
     stats: {
       hectaresBurnt: 0,

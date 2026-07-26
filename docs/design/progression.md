@@ -84,7 +84,7 @@ Because consecutive seasons are 4–5 years apart, each one-step increase in `t`
 
 ### 2.2 Extreme drought events (named spike seasons were cut — owner decision)
 
-No named thematic levels: escalation is systemic. From **2045**, a season has a 50 % (seeded) chance of an extreme drought; from **2060** it happens every season. Shortly before the season's **last** scripted fire (from 2060: before the last **two**), the river runs dry — every water tile becomes dry riverbed: no truck refilling, crossable by ground units, and no longer a sure fire barrier (a small spread factor lets fire cross the bed). Fuel dryness rises by +0.08 for the rest of the season and any pending relief rain is cancelled — no rain is coming. The winter rains refill the river between seasons. All values live in `balance.ts` (`droughtEvent`).
+No named thematic levels: escalation is systemic. From **2045**, a season has a 50 % (seeded) chance of an extreme drought; from **2060** it happens every season. Shortly before the season's **last** scripted fire (from 2060: before the last **two**), the river runs dry — every water tile becomes dry riverbed: no truck refilling, crossable by ground units, and no longer a sure fire barrier (a small spread factor lets fire cross the bed). Fuel dryness rises by +0.08 for the rest of the season and any pending relief rain is cancelled — no rain is coming. The drought also grounds the water bombers — there is no water to drop. The winter rains refill the river between seasons. All values live in `balance.ts` (`droughtEvent`).
 
 ---
 

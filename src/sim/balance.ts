@@ -123,6 +123,8 @@ export const bomber = {
 export const tower = {
   /** Towers granted at the unlock season; placement is the player's call. */
   count: 2,
+  /** One more tower is granted every ten years after the unlock. */
+  perDecade: 1,
   /** Chebyshev detection radius: fires inside are reported almost instantly. */
   radius: 8,
 };

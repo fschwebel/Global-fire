@@ -189,7 +189,7 @@ Burnt vegetation regrows on a real-years clock, advanced by the 4–5 years that
 - **Cooldowns** pace the real-time layer (bomber sorties, evac orders). Action points rejected (turn-based artifact); cooldowns-only rejected (no strategic layer, no season-over-season consequence).
 - **Budget:** `budget(s) = 80 + 12·t + 0.25 × unspent(s−1) + perfBonus(s−1)`, where `t = seasonIndex` (0–9) and `perfBonus = round(score/50)` (0–20, from the internal score §6.2). Clamped to a floor `minViable(s) = 90 + 6·t` that always affords the minimum effective loadout — the campaign is never mathematically lost.
 - Purchases persist across seasons (trucks survive unless destroyed; towers are permanent) — losing a truck hurts half a decade later too.
-- **Unlock-season grants are free** ("reassigned to your sector"): 2 trucks (2026), water bomber #1 (2030), the evacuation capability (2035 — after homes join the counter), towers ×2 (2040), fire crew #1 (2050), water bomber #2 (2055). Until the budget system ships (post-1.0), every grant arrives free; budget will buy extras, repairs, replacements, and additional placements.
+- **Unlock-season grants are free** ("reassigned to your sector"): 2 trucks (2026), water bomber #1 (2030), the evacuation capability (2035 — after homes join the counter), towers ×2 (2040, +1 each decade after), fire crew #1 (2050), water bomber #2 (2055). Until the budget system ships (post-1.0), every grant arrives free; budget will buy extras, repairs, replacements, and additional placements.
 
 ### 4.2 Fire truck (2026)
 
@@ -243,8 +243,8 @@ The big red button: dramatic, powerful, never sufficient alone — one line ever
 
 | Stat | v0 |
 |---|---|
-| Cost | 30, prep phase only, permanent; #1 free in 2040; cap 4 |
-| Radius | 8 tiles |
+| Grant | ×2 free in 2040, +1 every decade after (3 by 2050, 4 by 2060, 5 by 2070); placement is the player's call, permanent |
+| Radius | 8 tiles — every tower's radius lights up while the tower tool is armed, plus a placement-preview ring at the cursor |
 | Effect | in-radius fires reported at age ≤ 2 ticks (vs. 14) → smaller at engagement **and** longer warning times for downwind villages (§4.3) |
 
 Tuning target to preserve: a tower-covered ignition costs ~½ the burnt area of an uncovered one. *Prevention beating reaction is a core message — the numbers must actually say it.*

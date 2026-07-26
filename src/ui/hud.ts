@@ -235,6 +235,13 @@ export class Hud {
     if (running) this.ageAlerts(dt);
 
     // A depleted resource reads as locked, with an honest tooltip.
+    if (s.seasonYear >= unlocks.bomber) {
+      const grounded = s.script.drought?.done === true;
+      this.toolButtons.bomber.classList.toggle('locked', grounded);
+      this.toolButtons.bomber.title = grounded
+        ? 'Grounded — the drought left no water to drop'
+        : 'Water bomber — click the map to call a drop';
+    }
     if (s.seasonYear >= unlocks.towers) {
       const depleted = s.towersAvailable <= 0;
       this.toolButtons.tower.classList.toggle('locked', depleted);
@@ -280,7 +287,9 @@ export class Hud {
       const card = this.bomberCards.get(b.id);
       if (!card) continue;
       const status = card.querySelector<HTMLSpanElement>('.status');
-      if (status) status.textContent = bomberStatus(b);
+      if (status)
+        status.textContent =
+          s.script.drought?.done && b.state === 'ready' ? 'Grounded — drought' : bomberStatus(b);
       const bar = card.querySelector<HTMLDivElement>('.waterbar > div');
       if (bar) bar.style.width = `${bomberLoad(b) * 100}%`;
     }
@@ -371,7 +380,7 @@ export class Hud {
           break;
         case 'riverDry':
           this.pushAlert(
-            'Extreme drought — the river has run dry. No refills there, and fire may cross the bed.',
+            'Extreme drought — the river has run dry. No refills, the bombers are grounded, and fire may cross the bed.',
           );
           break;
         case 'seasonWindingDown':

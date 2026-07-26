@@ -21,8 +21,10 @@ export const unlockNotes: Record<number, string> = {
   2035: 'New this season: evacuation orders. Arm 📢 and click a village — clearing it takes time, so order early.',
   2040: 'New this season: two watch towers. Arm 🗼 and place them where nobody would call a fire in — a tower reports smoke almost instantly.',
   2045: 'From this season the fire can overrun a crew: if a rig is surrounded with no way out, you lose them. When the radio calls for pull-out, act.',
-  2050: 'New this season: a fire crew. Arm ⛏ and click vegetation tiles — the crew walks out and cuts them into a firebreak line. Click any clear tile to move them out of danger.',
+  2050: 'New this season: a fire crew (arm ⛏ and click vegetation to cut a firebreak line; any clear tile moves them out of danger) — and a third watch tower.',
   2055: 'New this season: a second water bomber joins the sector.',
+  2060: 'A fourth watch tower arrives — the sector has grown, and your eyes must grow with it.',
+  2070: 'A fifth watch tower arrives, for whatever it can still see.',
 };
 
 /**

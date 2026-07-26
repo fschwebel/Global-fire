@@ -602,6 +602,17 @@ describe('unlockable means', () => {
     expect(createSeason(42, 3).towersAvailable).toBe(2);
     expect(createSeason(42, 5).crews.length).toBe(1);
     expect(createSeason(42, 6).bombers.length).toBe(2);
+    // One more tower every decade after the 2040 unlock: 3 by 2050, 4 by 2060, 5 by 2070.
+    expect(createSeason(42, 5).towersAvailable).toBe(3);
+    expect(createSeason(42, 7).towersAvailable).toBe(4);
+    expect(createSeason(42, 9).towersAvailable).toBe(5);
+    // Placed towers count against the grant.
+    expect(
+      createSeason(42, 5, undefined, [
+        { x: 20, y: 12 },
+        { x: 30, y: 20 },
+      ]).towersAvailable,
+    ).toBe(1);
   });
 
   it('evacuation orders are refused before their unlock season', () => {
@@ -1226,5 +1237,40 @@ describe('dry-tank danger', () => {
       });
     }
     expect(warnedWet).toBe(false); // with water, one weak fire is just the job
+  });
+});
+
+describe('drought grounds the bombers', () => {
+  it('no bomber can be dispatched once the river has run dry', () => {
+    const s = createSeason(42, 7); // 2060: drought is certain
+    expect(s.script.drought).not.toBeNull();
+    // Before the drought: a dispatch goes out normally.
+    const before = step(s, [
+      {
+        type: 'bomberDrop',
+        x: s.bounds.x0 + 10,
+        y: s.bounds.y0 + 10,
+        x2: s.bounds.x0 + 14,
+        y2: s.bounds.y0 + 10,
+      },
+    ]);
+    expect(before.some((e) => e.type === 'bomberDispatched')).toBe(true);
+
+    // Trigger the drought, then try the second bomber: grounded.
+    s.script.drought!.tick = s.tick + 1;
+    let dried = false;
+    for (let i = 0; i < 5 && !dried; i++) dried = step(s).some((e) => e.type === 'riverDry');
+    expect(dried).toBe(true);
+    expect(s.bombers.some((b) => b.state === 'ready')).toBe(true); // bomber 2 sits ready...
+    const after = step(s, [
+      {
+        type: 'bomberDrop',
+        x: s.bounds.x0 + 20,
+        y: s.bounds.y0 + 12,
+        x2: s.bounds.x0 + 24,
+        y2: s.bounds.y0 + 12,
+      },
+    ]);
+    expect(after.some((e) => e.type === 'bomberDispatched')).toBe(false); // ...but cannot fly
   });
 });

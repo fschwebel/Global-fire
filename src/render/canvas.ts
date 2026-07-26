@@ -80,6 +80,10 @@ export class Renderer {
   private dropPreview: { x: number; y: number }[] | null = null;
   /** Orders clicked but not yet consumed by a sim tick. */
   private pendingOrders: { x: number; y: number }[] | null = null;
+  /** Tower tool armed: every tower's detection radius is highlighted. */
+  private highlightTowers = false;
+  /** Placement cursor while the tower tool is armed. */
+  private towerCursor: { x: number; y: number } | null = null;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -120,6 +124,16 @@ export class Renderer {
   /** Cells the armed retardant line would cover; null clears the preview. */
   setDropPreview(cells: { x: number; y: number }[] | null): void {
     this.dropPreview = cells;
+  }
+
+  /** Tower tool armed: light up every tower's detection radius. */
+  setHighlightTowers(on: boolean): void {
+    this.highlightTowers = on;
+  }
+
+  /** Where a new tower would stand (and see), while the tool is armed. */
+  setTowerCursor(cell: { x: number; y: number } | null): void {
+    this.towerCursor = cell;
   }
 
   /** Bake all static tiles once; only dynamic cells draw per frame. */
@@ -341,12 +355,21 @@ export class Renderer {
       ctx.setLineDash([]);
     }
 
-    // Watch towers: mast + a faint ring showing the detection radius.
+    // Watch towers: mast + detection radius — faint normally, lit while the
+    // tower tool is armed so coverage gaps are obvious.
     for (const tw of s.towers) {
       const px = tw.x * TILE - ox;
       const py = tw.y * TILE - oy;
-      ctx.strokeStyle = 'rgba(232, 228, 218, 0.12)';
-      ctx.lineWidth = 1;
+      if (this.highlightTowers) {
+        ctx.fillStyle = 'rgba(190, 220, 255, 0.08)';
+        ctx.beginPath();
+        ctx.arc(px + TILE / 2, py + TILE / 2, TW.radius * TILE, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.strokeStyle = this.highlightTowers
+        ? 'rgba(210, 230, 255, 0.6)'
+        : 'rgba(232, 228, 218, 0.12)';
+      ctx.lineWidth = this.highlightTowers ? 2 : 1;
       ctx.beginPath();
       ctx.arc(px + TILE / 2, py + TILE / 2, TW.radius * TILE, 0, Math.PI * 2);
       ctx.stroke();
@@ -372,6 +395,19 @@ export class Renderer {
       ctx.fillRect(px + 5, py + 5, TILE - 10, TILE - 10);
       ctx.fillStyle = '#5d4037';
       ctx.fillRect(px + 8, py + 8, TILE - 16, TILE - 16);
+    }
+
+    // Tower placement cursor: where the new tower would stand, and what it would see.
+    if (this.towerCursor && this.highlightTowers) {
+      const cx = (this.towerCursor.x + 0.5) * TILE - ox;
+      const cy = (this.towerCursor.y + 0.5) * TILE - oy;
+      ctx.setLineDash([6, 5]);
+      ctx.strokeStyle = 'rgba(210, 230, 255, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, TW.radius * TILE, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
 
     // Orders awaiting their sim tick: a small ring so a paused click never looks dead.

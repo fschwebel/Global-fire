@@ -274,6 +274,8 @@ export function dispatchBomber(
   y2: number,
 ): number | null {
   if (!inActive(s, x, y) || (x === x2 && y === y2)) return null;
+  // An extreme drought grounds the fleet: there is no water to drop.
+  if (s.script.drought?.done) return null;
   const b = s.bombers.find((bb) => bb.state === 'ready');
   if (!b) return null;
   const entry = nearestEdgePoint(s, { x, y });
