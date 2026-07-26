@@ -935,3 +935,19 @@ describe('firefighter danger rule', () => {
     expect(crew.y).toBe(road.y);
   });
 });
+
+describe('warming display data', () => {
+  it('every season year has a central warming estimate, monotonically rising', async () => {
+    const { warming, hotDayAt, hotDayFactor } = await import('../src/ui/facts');
+    let prev = 0;
+    for (const season of seasons) {
+      const w = warming[season.year];
+      expect(w, `warming for ${season.year}`).toBeDefined();
+      expect(w!).toBeGreaterThan(prev);
+      prev = w!;
+      // Peak-day estimate: 1.5× the mean, one decimal.
+      expect(hotDayAt(season.year)).toBeCloseTo(Math.round(w! * hotDayFactor * 10) / 10, 5);
+      expect(hotDayAt(season.year)).toBeGreaterThan(w!);
+    }
+  });
+});

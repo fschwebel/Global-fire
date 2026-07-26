@@ -25,6 +25,35 @@ export const unlockNotes: Record<number, string> = {
   2055: 'New this season: a second water bomber joins the sector.',
 };
 
+/**
+ * Global-mean warming vs pre-industrial per season (°C): central estimates for
+ * a middle-of-the-road pathway (IPCC AR6, ≈SSP2-4.5) — progression doc §2.1.
+ */
+export const warming: Record<number, number> = {
+  2026: 1.3,
+  2030: 1.4,
+  2035: 1.5,
+  2040: 1.6,
+  2045: 1.75,
+  2050: 1.9,
+  2055: 2.0,
+  2060: 2.1,
+  2065: 2.25,
+  2070: 2.35,
+};
+
+/**
+ * Hot extremes over many land regions warm at roughly 1.5–2× the global-mean
+ * rate (IPCC AR6 WG1: at +2 °C global, a 1-in-10-year heat event runs ≈ +2.6 °C).
+ * The in-game peak-day estimate uses the low end of that range.
+ */
+export const hotDayFactor = 1.5;
+
+/** Peak-day warming estimate for a season year, °C to one decimal. */
+export function hotDayAt(year: number): number {
+  return Math.round((warming[year] ?? 0) * hotDayFactor * 10) / 10;
+}
+
 /** Season year each loss counter joins the stat bar (canon: progression doc §1.3). */
 export const reveals = {
   animals: 2030,

@@ -37,6 +37,19 @@ body {
   letter-spacing: 2px;
 }
 
+#tempnote {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #b8b2a4;
+  cursor: help;
+}
+
+#tempmax {
+  color: #d9a05a;
+}
+
 #stats {
   font-variant-numeric: tabular-nums;
   font-size: 15px;
@@ -379,6 +392,10 @@ body {
 
   #year {
     font-size: 17px;
+  }
+
+  #tempnote {
+    font-size: 10px;
   }
 
   #stats {

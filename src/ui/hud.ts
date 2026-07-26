@@ -1,7 +1,7 @@
 import { bomber as B, crewUnit as CU, truck as T, unlocks } from '../sim/balance';
 import type { Bomber, Crew, GameEvent, GameState, Stats, Truck } from '../sim/state';
 import { cellAt, inActive } from '../sim/state';
-import { briefingFacts, reveals, unlockNotes } from './facts';
+import { briefingFacts, hotDayAt, reveals, unlockNotes, warming } from './facts';
 
 export type Tool = 'engine' | 'evac' | 'bomber' | 'tower' | 'crew';
 
@@ -97,6 +97,9 @@ export class Hud {
   private ffs = el<HTMLSpanElement>('ffs');
   private civs = el<HTMLSpanElement>('civs');
   private year = el<HTMLDivElement>('year');
+  private tempnote = el<HTMLDivElement>('tempnote');
+  private tempavg = el<HTMLSpanElement>('tempavg');
+  private tempmax = el<HTMLSpanElement>('tempmax');
   private windarrow = el<HTMLSpanElement>('windarrow');
   private windspeed = el<HTMLSpanElement>('windspeed');
   private dryness = el<HTMLSpanElement>('dryness');
@@ -164,6 +167,14 @@ export class Hud {
   private applySeason(): void {
     const s = this.state;
     this.year.textContent = String(s.seasonYear);
+    const avg = warming[s.seasonYear];
+    if (avg !== undefined) {
+      this.tempavg.textContent = `≈ +${avg} °C — the global average`;
+      this.tempmax.textContent = `peak summer days here: ≈ +${hotDayAt(s.seasonYear)} °C`;
+      this.tempnote.title =
+        'Central estimate for a middle-of-the-road emissions pathway (IPCC AR6, ≈SSP2-4.5), vs pre-industrial. ' +
+        'A global average understates a fire season: land warms faster than the mean, and hot extremes rise roughly 1.5–2× faster (IPCC AR6 WG1).';
+    }
     this.dryness.textContent = `dryness ${Math.round(s.dryness * 100)}%`;
     this.animals.hidden = s.seasonYear < reveals.animals;
     this.houses.hidden = s.seasonYear < reveals.houses;
