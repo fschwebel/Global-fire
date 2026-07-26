@@ -1,4 +1,5 @@
 import {
+  droughtEvent as DE,
   ignitionSchedule as IG,
   map as M,
   regrowth as RG,
@@ -365,7 +366,7 @@ function blendSectorSeam(grid: Cell[], seed: number, seasonIndex: number, statio
 function buildScript(s: GameState, seasonIndex: number, villages: Point[]): SeasonScript {
   const rng = mulberry32(s.seed ^ (0xbeef + seasonIndex));
   const params = seasons[seasonIndex]!;
-  const script: SeasonScript = { ignitions: [], windShifts: [], reliefRains: [] };
+  const script: SeasonScript = { ignitions: [], windShifts: [], reliefRains: [], drought: null };
   const b = s.bounds;
 
   // Connected flammable components within the sector: a fire only matters if
@@ -463,6 +464,16 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
     script.reliefRains.push({ tick: Math.floor(params.seasonLen * 0.65), done: false });
   }
 
+  // Extreme drought: possible from 2045, certain (and earlier) from 2060 —
+  // the river runs dry shortly before the season's late fires.
+  if (params.year >= DE.from && (params.year >= DE.alwaysFrom || rng() < DE.chance)) {
+    const fromEnd = params.year >= DE.alwaysFrom ? DE.ignitionsFromEndEarly : 1;
+    const targetIndex = Math.max(0, script.ignitions.length - fromEnd);
+    const target = script.ignitions[targetIndex];
+    if (target)
+      script.drought = { tick: Math.max(1, target.tick - DE.leadTicks), targetIndex, done: false };
+  }
+
   return script;
 }
 
@@ -489,6 +500,8 @@ export function createSeason(
       throw new Error('carry grid does not match world size');
     grid = carryGrid.map((c) => ({
       ...c,
+      // The winter rains refill a drought-dried river between seasons.
+      type: c.type === 'dryriver' ? ('water' as const) : c.type,
       state: c.state === 'burning' ? ('burnt' as const) : c.state,
       fuel: 0,
       intensity: 0,
@@ -581,7 +594,7 @@ export function createSeason(
       firefightersLost: 0,
       civiliansLost: 0,
     },
-    script: { ignitions: [], windShifts: [], reliefRains: [] },
+    script: { ignitions: [], windShifts: [], reliefRains: [], drought: null },
     rng,
     ended: false,
     terrainVersion: 0,

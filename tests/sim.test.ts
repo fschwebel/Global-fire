@@ -970,3 +970,48 @@ describe('warming display data', () => {
     }
   });
 });
+
+describe('extreme drought', () => {
+  it('never scheduled before 2045', () => {
+    for (const idx of [0, 1, 2, 3]) expect(createSeason(42, idx).script.drought).toBeNull();
+  });
+
+  it('a coin flip 2045–2055, certain from 2060, ahead of the right fire', async () => {
+    const { droughtEvent } = await import('../src/sim/balance');
+    // 2045–2055: both outcomes occur across seeds (seeded, deterministic).
+    const rolls = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(
+      (seed) => createSeason(seed, 4).script.drought !== null,
+    );
+    expect(rolls.some(Boolean)).toBe(true);
+    expect(rolls.some((r) => !r)).toBe(true);
+    // 2045+: precedes the last fire; 2060+: always on, precedes the second-to-last.
+    for (const idx of [7, 8, 9]) {
+      const s = createSeason(42, idx);
+      expect(s.script.drought).not.toBeNull();
+      const d = s.script.drought!;
+      expect(d.targetIndex).toBe(s.script.ignitions.length - droughtEvent.ignitionsFromEndEarly);
+      const target = s.script.ignitions[d.targetIndex]!;
+      expect(d.tick).toBeLessThan(target.tick);
+    }
+  });
+
+  it('the river dries, dryness climbs, and the winter rains refill it next season', () => {
+    const s = createSeason(42, 7); // 2060: drought is certain
+    const drynessBefore = s.dryness;
+    const waterBefore = s.grid.filter((c) => c.type === 'water').length;
+    expect(waterBefore).toBeGreaterThan(0);
+
+    let dried = false;
+    for (let i = 0; i < s.script.drought!.tick + 5 && !dried; i++)
+      dried = step(s).some((e) => e.type === 'riverDry');
+    expect(dried).toBe(true);
+    expect(s.grid.filter((c) => c.type === 'water').length).toBe(0);
+    expect(s.grid.filter((c) => c.type === 'dryriver').length).toBe(waterBefore);
+    expect(s.dryness).toBeGreaterThan(drynessBefore);
+    expect(s.terrainVersion).toBeGreaterThan(0);
+
+    const next = createSeason(42, 8, s.grid, s.towers);
+    expect(next.grid.filter((c) => c.type === 'dryriver').length).toBe(0);
+    expect(next.grid.filter((c) => c.type === 'water').length).toBe(waterBefore);
+  });
+});

@@ -82,17 +82,9 @@ Because consecutive seasons are 4–5 years apart, each one-step increase in `t`
 | night windows | Nights warming faster than days; flammable night hours up ~36 % across global burnable lands, 1979–2020 (Balch et al. 2022) |
 | relief rains | Longer intra-seasonal dry spells; season-ending rains arriving later |
 
-### 2.2 Spike-season overrides (additive scripted modifiers, not a second difficulty system)
+### 2.2 Extreme drought events (named spike seasons were cut — owner decision)
 
-| Season | Overrides on the base curve |
-|---|---|
-| **2035** The Long Drought | dryness +0.12; wildlife density ×3 on waterhole-adjacent tiles (raises the animal stakes); both scripted ignitions land in the first half of the season |
-| **2045** The Heat Dome | ticks 120–200: dryness +0.15, windStr ×2, one guaranteed 90° wind shift; scripted near-entrapment beat |
-| **2055** The Early Season | 2 fires active at tick 0; two night windows |
-| **2065** The Interface | ember storm: P_SPOT ×4 for 60 ticks, cone directed at the WUI district; convoy set piece (a scripted evacuation timer along the valley road that the front threatens to cut — built on the existing evac system, no new entity type) |
-| **2070** The Firestorm | Heat-dome modifiers + ember storm + one night window + mid-level pyroCb event: 3 simultaneous lightning ignitions and a full wind reversal in one tick |
-
-Guarantee: no parameter ever exceeds its 2070 value — the finale is the tuned ceiling of the game.
+No named thematic levels: escalation is systemic. From **2045**, a season has a 50 % (seeded) chance of an extreme drought; from **2060** it happens every season. Shortly before the season's **last** scripted fire (from 2060: before the last **two**), the river runs dry — every water tile becomes dry riverbed: no truck refilling, crossable by ground units, and no longer a sure fire barrier (a small spread factor lets fire cross the bed). Fuel dryness rises by +0.08 for the rest of the season and any pending relief rain is cancelled — no rain is coming. The winter rains refill the river between seasons. All values live in `balance.ts` (`droughtEvent`).
 
 ---
 

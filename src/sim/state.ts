@@ -5,6 +5,8 @@ export type TileType =
   | 'sparse'
   | 'grass'
   | 'water'
+  /** The river during an extreme drought: no refilling, crossable, no longer a sure barrier. */
+  | 'dryriver'
   | 'road'
   | 'house'
   | 'firebreak'
@@ -141,10 +143,19 @@ export interface ScriptedRain {
   done: boolean;
 }
 
+/** Extreme drought: the river runs dry ahead of the season's late fires. */
+export interface ScriptedDrought {
+  tick: number;
+  /** The scripted ignition this drought must precede (index into ignitions). */
+  targetIndex: number;
+  done: boolean;
+}
+
 export interface SeasonScript {
   ignitions: ScriptedIgnition[];
   windShifts: ScriptedWindShift[];
   reliefRains: ScriptedRain[];
+  drought: ScriptedDrought | null;
 }
 
 export interface GameState {
@@ -213,6 +224,7 @@ export type GameEvent =
   /** A trapped unit was overrun — firefighters died and the unit is gone this season. */
   | { type: 'unitLost'; unit: 'engine' | 'crew'; unitId: number; firefighters: number }
   | { type: 'reliefRain' }
+  | { type: 'riverDry' }
   | { type: 'windShift' }
   | { type: 'seasonWindingDown' }
   | { type: 'seasonEnded'; report: Stats };

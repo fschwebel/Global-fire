@@ -160,7 +160,7 @@ Cost: up to 2,400 cells (only the active sector is stepped) × ≤ 8 neighbour c
 | Dense forest | slow, intense | Main fuel mass; habitat ×3 | 30 % |
 | Sparse forest | yes | Buffers; habitat ×2 | 25 % |
 | Grassland | fast, weak | Fire highways between forest blocks; habitat ×1 | 20 % |
-| Water (lake/river) | no | Hard barrier + truck/bomber refill | 8 % |
+| Water (lake/river) | no | Hard barrier + truck refill — until an extreme drought dries the river (progression doc §2.2) | 8 % |
 | Road | ~no (0.05) | Truck network (4× speed); weak break | 5 % |
 | House/village | yes | The stakes: occupants, homes | 3 % (2–4 villages) |
 | Firebreak (bare earth) | ~no (0.05) | Pre-authored from the start; player-cut from 2050 | 1 % |

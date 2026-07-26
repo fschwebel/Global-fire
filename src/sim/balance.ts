@@ -18,6 +18,8 @@ export const spread = {
     road: 0.05,
     firebreak: 0.05,
     water: 0,
+    // A dry bed is no longer a sure barrier — fire crosses it rarely, but it can.
+    dryriver: 0.06,
     rock: 0,
   } satisfies Record<TileType, number>,
   /** moistureFactor(dryness) = 0.35 + 1.05 × dryness */
@@ -73,6 +75,7 @@ export const truck = {
     firebreak: 2.2,
     rock: 1.1,
     water: 0,
+    dryriver: 1.6, // a rough bed, but crossable
   } satisfies Record<TileType, number>,
   extinguishPerTick: 4, // intensity removed per tick (cell regrows +1 → net −3)
   waterCapacity: 30,
@@ -129,6 +132,26 @@ export const crewUnit = {
   /** Ticks to cut one vegetation tile into a firebreak. */
   cutTicks: 3,
   crew: 2,
+};
+
+/**
+ * Extreme drought events (no named levels — systemic escalation): from 2045 a
+ * season may see the river run dry shortly before its last scripted fire;
+ * from 2060 it always does, and earlier — before the last two. A dry river
+ * gives no refills, is crossable, and is no longer a sure fire barrier.
+ * The winter rains refill it between seasons.
+ */
+export const droughtEvent = {
+  from: 2045,
+  /** Before this year the event is a coin flip per season; from it, certain. */
+  alwaysFrom: 2060,
+  chance: 0.5,
+  /** From alwaysFrom the drought precedes the last two fires instead of the last one. */
+  ignitionsFromEndEarly: 2,
+  /** Ticks of warning between the river running dry and the target ignition. */
+  leadTicks: 10,
+  /** Extra fuel dryness while the drought holds (rest of the season). */
+  drynessBonus: 0.08,
 };
 
 /**

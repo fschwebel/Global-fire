@@ -332,6 +332,11 @@ export class Hud {
         case 'reliefRain':
           this.pushAlert('Rain moves through the valley.');
           break;
+        case 'riverDry':
+          this.pushAlert(
+            'Extreme drought — the river has run dry. No refills there, and fire may cross the bed.',
+          );
+          break;
         case 'seasonWindingDown':
           this.pushAlert('All fires are out — the season winds down.');
           break;

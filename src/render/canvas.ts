@@ -10,6 +10,7 @@ const TERRAIN: Record<TileType, string> = {
   sparse: '#3f8a3f',
   grass: '#9ccc65',
   water: '#4a90d9',
+  dryriver: '#cbbd90',
   road: '#b0a08a',
   house: '#c98a4b',
   firebreak: '#8d6e63',
@@ -150,6 +151,15 @@ export class Renderer {
             const tx = 3 + hash2(x, y, 43 + i) * (TILE - 7);
             const tyy = 4 + hash2(y, x, 61 + i) * (TILE - 9);
             tctx.fillRect(px + tx, py + tyy, 1.4, h);
+          }
+        }
+        if (c.type === 'dryriver') {
+          // Cracked-bed pebbles so the dead river reads at a glance.
+          tctx.fillStyle = '#a89b74';
+          for (let i = 0; i < 3; i++) {
+            const bx = 3 + hash2(x, y, 77 + i) * (TILE - 8);
+            const by = 3 + hash2(y, x, 91 + i) * (TILE - 8);
+            tctx.fillRect(px + bx, py + by, 3, 2);
           }
         }
         if (c.type === 'house') {

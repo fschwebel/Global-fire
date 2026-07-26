@@ -1,5 +1,6 @@
 import {
   detection,
+  droughtEvent,
   evac,
   habitatPerTile,
   ignitionSchedule,
@@ -124,6 +125,21 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
       s.wind.dir += shift.delta;
       shift.done = true;
       events.push({ type: 'windShift' });
+    }
+  }
+
+  // Extreme drought: the river runs dry ahead of the season's late fires
+  // (also triggers if its target ignition was pulled forward to this tick).
+  const drought = s.script.drought;
+  if (drought && !drought.done) {
+    const target = s.script.ignitions[drought.targetIndex];
+    if (s.tick >= drought.tick || (target && !target.done && s.tick >= target.tick)) {
+      drought.done = true;
+      for (const c of s.grid) if (c.type === 'water') c.type = 'dryriver';
+      s.dryness = Math.min(0.95, s.dryness + droughtEvent.drynessBonus);
+      for (const r of s.script.reliefRains) r.done = true; // no rain is coming
+      s.terrainVersion += 1;
+      events.push({ type: 'riverDry' });
     }
   }
 
