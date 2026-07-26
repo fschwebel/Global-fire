@@ -425,6 +425,89 @@ body {
   line-height: 1.9;
 }
 
+/* The finale: verdict, retrospective vs the unfought valley, epitaph, links. */
+#d-final {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 520px;
+}
+
+#d-final[hidden] {
+  display: none;
+}
+
+#d-verdict {
+  font-size: 19px;
+  color: #e8e4da;
+}
+
+#d-compare {
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+#d-compare th {
+  font-weight: 400;
+  font-size: 12px;
+  color: #9aa392;
+  padding: 2px 14px 6px;
+}
+
+#d-compare td {
+  padding: 3px 14px;
+  border-top: 1px solid #2c352a;
+  text-align: right;
+}
+
+#d-compare td:first-child {
+  text-align: left;
+  color: #9aa392;
+}
+
+#d-compare td:last-child {
+  color: #d9736a;
+}
+
+#d-saved {
+  font-size: 15px;
+  color: #9ccc65;
+}
+
+#d-cost {
+  font-size: 13px;
+  color: #b8b2a4;
+}
+
+#d-epitaph {
+  font-size: 15px;
+  font-style: italic;
+  color: #b8b2a4;
+  line-height: 1.6;
+}
+
+#d-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+#d-links a {
+  color: #cdd8c2;
+  text-decoration: none;
+  font-size: 13px;
+  border: 1px solid #3a4536;
+  background: #1a2118;
+  padding: 6px 12px;
+}
+
+#d-links a:hover {
+  border-color: #5d7a52;
+}
+
 #btn-restart {
   background: #3d5236;
   color: #e8e4da;

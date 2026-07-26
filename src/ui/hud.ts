@@ -117,6 +117,9 @@ export class Hud {
   private dTitle = el<HTMLHeadingElement>('d-title');
   private report = el<HTMLDivElement>('report');
   private dCampaign = el<HTMLParagraphElement>('d-campaign');
+  private dFinal = el<HTMLDivElement>('d-final');
+  private dSaved = el<HTMLDivElement>('d-saved');
+  private dCost = el<HTMLDivElement>('d-cost');
   private restartBtn = el<HTMLButtonElement>('btn-restart');
   private engines = el<HTMLDivElement>('engines');
   private towerCount = el<HTMLSpanElement>('tower-count');
@@ -394,7 +397,13 @@ export class Hud {
     this.briefing.hidden = true;
   }
 
-  showDebrief(season: Stats, campaign: Stats, year: number, isFinal: boolean): void {
+  showDebrief(
+    season: Stats,
+    campaign: Stats,
+    year: number,
+    isFinal: boolean,
+    unfought: Stats | null = null,
+  ): void {
     const lines = [`${season.hectaresBurnt} hectares burnt`];
     if (year >= reveals.animals) lines.push(`~${season.animalsKilled} animals killed`);
     if (year >= reveals.houses && season.housesLost > 0)
@@ -407,19 +416,47 @@ export class Hud {
 
     if (isFinal) {
       this.dTitle.textContent = 'The Long Defense — 2070';
-      const people =
-        campaign.civiliansLost > 0
-          ? ` and ${campaign.civiliansLost} of the people you protected`
-          : '';
-      this.dCampaign.textContent = `Across 44 years you lost ${campaign.hectaresBurnt} hectares, ~${campaign.animalsKilled} animals, ${campaign.housesLost} homes${people}. This forest is invented. The trend is not.`;
+      this.dFinal.hidden = false;
+      this.dCampaign.hidden = true;
+      this.fillFinale(campaign, unfought);
       this.restartBtn.textContent = 'Start a new campaign';
     } else {
       this.dTitle.textContent = 'Season over — the rains arrive';
+      this.dFinal.hidden = true;
+      this.dCampaign.hidden = false;
       this.dCampaign.textContent =
         year > 2026 ? `Campaign so far: ${statLine(campaign, year)}` : '';
       this.restartBtn.textContent = 'Continue';
     }
     this.debrief.hidden = false;
+  }
+
+  /** The retrospective: your 44 years against the same valley left unfought. */
+  private fillFinale(campaign: Stats, unfought: Stats | null): void {
+    const num = (n: number) => n.toLocaleString('en-US');
+    const cell = (id: string, text: string) => {
+      el<HTMLTableCellElement>(id).textContent = text;
+    };
+    const hasComparison = unfought !== null;
+    el<HTMLTableElement>('d-compare').hidden = !hasComparison;
+    this.dSaved.hidden = !hasComparison;
+    if (unfought) {
+      cell('c-ha-you', `${num(campaign.hectaresBurnt)} ha`);
+      cell('c-ha-not', `${num(unfought.hectaresBurnt)} ha`);
+      cell('c-an-you', `~${num(campaign.animalsKilled)}`);
+      cell('c-an-not', `~${num(unfought.animalsKilled)}`);
+      cell('c-ho-you', num(campaign.housesLost));
+      cell('c-ho-not', num(unfought.housesLost));
+      cell('c-pe-you', num(campaign.civiliansLost));
+      cell('c-pe-not', num(unfought.civiliansLost));
+      const ha = Math.max(0, unfought.hectaresBurnt - campaign.hectaresBurnt);
+      const homes = Math.max(0, unfought.housesLost - campaign.housesLost);
+      const lives = Math.max(0, unfought.civiliansLost - campaign.civiliansLost);
+      this.dSaved.textContent = `Your defense saved ≈ ${num(ha)} hectares, ${num(homes)} homes and ${num(lives)} lives.`;
+    }
+    this.dCost.hidden = campaign.firefightersLost === 0;
+    if (campaign.firefightersLost > 0)
+      this.dCost.textContent = `It cost ${campaign.firefightersLost} firefighters. They held lines that could not all be held.`;
   }
 
   private pushAlert(text: string): void {

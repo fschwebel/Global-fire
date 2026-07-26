@@ -1015,3 +1015,16 @@ describe('extreme drought', () => {
     expect(next.grid.filter((c) => c.type === 'water').length).toBe(waterBefore);
   });
 });
+
+describe('the ending', () => {
+  it('the unfought counterfactual is deterministic and carries real losses', async () => {
+    const { simulateUnfoughtCampaign } = await import('../src/game/counterfactual');
+    const a = simulateUnfoughtCampaign(42, 9);
+    const b = simulateUnfoughtCampaign(42, 9);
+    expect(a).toEqual(b);
+    expect(a.hectaresBurnt).toBeGreaterThan(500);
+    expect(a.animalsKilled).toBeGreaterThan(500);
+    expect(a.housesLost).toBeGreaterThan(0);
+    expect(a.firefightersLost).toBe(0); // nobody was sent anywhere
+  });
+});

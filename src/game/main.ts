@@ -5,6 +5,7 @@ import type { Cell, GameState, Stats } from '../sim/state';
 import { dropLineCells } from '../sim/units';
 import { Hud, type Tool } from '../ui/hud';
 import { MapViewport } from '../ui/viewport';
+import { simulateUnfoughtCampaign } from './counterfactual';
 import { GameLoop } from './loop';
 import { clearCampaign, loadCampaign, saveCampaign } from './save';
 
@@ -148,7 +149,16 @@ function onSeasonEnd(report: Stats): void {
   // a refresh at the 2070 debrief resumes the finale instead of losing the run.
   if (!debriefIsFinal)
     saveCampaign(CAMPAIGN_SEED, seasonIndex + 1, campaign, state.grid, state.towers);
-  hud.showDebrief(report, campaign, state.seasonYear, debriefIsFinal);
+  // The ending measures the campaign against the same valley left unfought.
+  let unfought: Stats | null = null;
+  if (debriefIsFinal) {
+    try {
+      unfought = simulateUnfoughtCampaign(CAMPAIGN_SEED, LAST_SEASON);
+    } catch {
+      unfought = null; // the finale still shows without the comparison
+    }
+  }
+  hud.showDebrief(report, campaign, state.seasonYear, debriefIsFinal, unfought);
 }
 
 // --- Input -----------------------------------------------------------------
