@@ -102,6 +102,9 @@ export const unlocks = {
 export const evac = {
   /** Ticks for an ordered village to clear. */
   durationTicks: 40,
+  /** Emergency services run ONE evacuation at a time, then regroup for this many
+   *  ticks — clearing the whole map is a season-long sequencing decision, not four clicks. */
+  cooldownTicks: 25,
   /** Share of a burning home's occupants lost, by the village's evacuation state. */
   mortalityNone: 0.3,
   mortalityEvacuating: 0.1,

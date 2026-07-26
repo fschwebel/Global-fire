@@ -1274,3 +1274,35 @@ describe('drought grounds the bombers', () => {
     expect(after.some((e) => e.type === 'bomberDispatched')).toBe(false); // ...but cannot fly
   });
 });
+
+describe('evacuation pacing', () => {
+  it('one evacuation at a time, then a regrouping pause before the next', async () => {
+    const { evac: EV } = await import('../src/sim/balance');
+    const s = createSeason(42, 2); // 2035
+    expect(s.villages.length).toBeGreaterThanOrEqual(3);
+
+    // First order goes out; a second while it runs is refused.
+    expect(
+      step(s, [{ type: 'evacuate', villageId: 1 }]).some((e) => e.type === 'evacuationStarted'),
+    ).toBe(true);
+    expect(
+      step(s, [{ type: 'evacuate', villageId: 2 }]).some((e) => e.type === 'evacuationStarted'),
+    ).toBe(false);
+    expect(s.villages[1]!.evac).toBe('none');
+
+    // Run to completion, then order during the regrouping pause: still refused.
+    let done = false;
+    for (let i = 0; i < EV.durationTicks + 5 && !done; i++)
+      done = step(s).some((e) => e.type === 'evacuationComplete');
+    expect(done).toBe(true);
+    expect(
+      step(s, [{ type: 'evacuate', villageId: 2 }]).some((e) => e.type === 'evacuationStarted'),
+    ).toBe(false);
+
+    // After the pause, the next village can go.
+    for (let i = 0; i < EV.cooldownTicks + 2; i++) step(s);
+    expect(
+      step(s, [{ type: 'evacuate', villageId: 2 }]).some((e) => e.type === 'evacuationStarted'),
+    ).toBe(true);
+  });
+});

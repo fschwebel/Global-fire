@@ -34,6 +34,9 @@ function applyCommands(s: GameState, commands: Command[], events: GameEvent[]): 
       }
       case 'evacuate': {
         if (s.seasonYear < unlocks.evacuate) break;
+        // One evacuation at a time, and a regrouping pause after each.
+        if (s.villages.some((vv) => vv.evac === 'inProgress')) break;
+        if (s.tick < s.evacReadyAtTick) break;
         const v = s.villages.find((vv) => vv.id === cmd.villageId);
         if (v && v.evac === 'none') {
           v.evac = 'inProgress';
@@ -252,6 +255,7 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
   for (const v of s.villages) {
     if (v.evac === 'inProgress' && s.tick - v.evacStartTick >= evac.durationTicks) {
       v.evac = 'done';
+      s.evacReadyAtTick = s.tick + evac.cooldownTicks; // services regroup
       s.terrainVersion += 1; // the houses repaint as cleared and shuttered
       events.push({ type: 'evacuationComplete', villageId: v.id });
     }

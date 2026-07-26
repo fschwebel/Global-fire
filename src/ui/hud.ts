@@ -235,6 +235,16 @@ export class Hud {
     if (running) this.ageAlerts(dt);
 
     // A depleted resource reads as locked, with an honest tooltip.
+    if (s.seasonYear >= unlocks.evacuate) {
+      const busy = s.villages.some((v) => v.evac === 'inProgress');
+      const regrouping = !busy && s.tick < s.evacReadyAtTick;
+      this.toolButtons.evac.classList.toggle('locked', busy || regrouping);
+      this.toolButtons.evac.title = busy
+        ? 'Emergency services are mid-evacuation — one village at a time'
+        : regrouping
+          ? 'Emergency services are regrouping'
+          : 'Evacuation order — click a village to move its people out';
+    }
     if (s.seasonYear >= unlocks.bomber) {
       const grounded = s.script.drought?.done === true;
       this.toolButtons.bomber.classList.toggle('locked', grounded);

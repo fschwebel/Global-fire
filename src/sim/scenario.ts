@@ -605,6 +605,7 @@ export function createSeason(
     randomIgnitionRate: params.randomIgnitionRate,
     rainTicks: 0,
     quietTicks: 0,
+    evacReadyAtTick: 0,
     center,
     trucks: [1, 2].map((id) => ({
       id,

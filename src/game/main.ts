@@ -233,6 +233,14 @@ mapwrap.addEventListener('click', (ev) => {
       break;
     }
     case 'evac': {
+      if (state.villages.some((v) => v.evac === 'inProgress')) {
+        hud.notify('Emergency services are mid-evacuation — one village at a time.');
+        break;
+      }
+      if (state.tick < state.evacReadyAtTick) {
+        hud.notify('Emergency services are regrouping — the next order must wait.');
+        break;
+      }
       // The click names a village, not a tile.
       let best: { id: number; d: number } | null = null;
       for (const v of state.villages) {

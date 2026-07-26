@@ -211,7 +211,7 @@ Burnt vegetation regrows on a real-years clock, advanced by the 4–5 years that
 | Stat | v0 |
 |---|---|
 | Target | one village (click/tap) |
-| Cost | 8 budget + 30-tick per-village cooldown |
+| Pacing | services run **one evacuation at a time**, then regroup **25 ticks** before the next order — clearing every village is a season-long sequencing decision |
 | Duration | `evacBase × (2 − preparedness)` ticks, `evacBase = 12 + 1 per house tile`; houses empty progressively along the road, farthest-from-road last |
 | Cleared tiles | 0 % mortality (homes can still be lost) |
 
