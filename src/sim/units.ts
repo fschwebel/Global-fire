@@ -10,33 +10,81 @@ function moveCost(s: GameState, x: number, y: number): number {
   return cell.state === 'burning' ? 25 / speed : 1 / speed;
 }
 
-/** A* over the move-cost grid. Returns the path excluding start, or [] if unreachable. */
-export function findPath(s: GameState, from: Point, to: Point): Point[] {
-  if (!inActive(s, to.x, to.y) || moveCost(s, to.x, to.y) === Number.POSITIVE_INFINITY) return [];
+/**
+ * A-star / Dijkstra over the move-cost grid, on a binary min-heap. With `to`, an
+ * admissible-enough Manhattan heuristic focuses the search and it stops at the
+ * goal; without, it relaxes the whole reachable sector (single-source costs).
+ * Heap ties break on insertion order, so the search stays fully deterministic.
+ */
+function search(
+  s: GameState,
+  from: Point,
+  to: Point | null,
+): { g: Float64Array; prev: Int32Array } {
   const n = s.w * s.h;
   const g = new Float64Array(n).fill(Number.POSITIVE_INFINITY);
   const prev = new Int32Array(n).fill(-1);
   const closed = new Uint8Array(n);
   const start = idx(s, from.x, from.y);
-  const goal = idx(s, to.x, to.y);
+  const goal = to ? idx(s, to.x, to.y) : -1;
   g[start] = 0;
-  // Simple open list — the grid is 1,536 cells; no heap needed.
-  const open: number[] = [start];
-  const h = (i: number) => {
-    const x = i % s.w;
-    const y = Math.floor(i / s.w);
-    return (Math.abs(x - to.x) + Math.abs(y - to.y)) * 0.25;
+
+  // Parallel-array binary min-heap with lazy deletion: stale entries are
+  // skipped on pop via the `closed` check.
+  const hf: number[] = [];
+  const hseq: number[] = [];
+  const hcell: number[] = [];
+  let seq = 0;
+  const less = (a: number, b: number) =>
+    hf[a]! < hf[b]! || (hf[a]! === hf[b]! && hseq[a]! < hseq[b]!);
+  const swap = (a: number, b: number) => {
+    [hf[a], hf[b]] = [hf[b]!, hf[a]!];
+    [hseq[a], hseq[b]] = [hseq[b]!, hseq[a]!];
+    [hcell[a], hcell[b]] = [hcell[b]!, hcell[a]!];
   };
-  while (open.length > 0) {
-    let bi = 0;
-    for (let i = 1; i < open.length; i++)
-      if (g[open[i]!]! + h(open[i]!) < g[open[bi]!]! + h(open[bi]!)) bi = i;
-    const cur = open.splice(bi, 1)[0]!;
-    if (cur === goal) break;
+  const push = (f: number, cell: number) => {
+    hf.push(f);
+    hseq.push(seq++);
+    hcell.push(cell);
+    let i = hf.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (!less(i, p)) break;
+      swap(i, p);
+      i = p;
+    }
+  };
+  const pop = (): number => {
+    const top = hcell[0]!;
+    const last = hf.length - 1;
+    swap(0, last);
+    hf.pop();
+    hseq.pop();
+    hcell.pop();
+    let i = 0;
+    for (;;) {
+      const l = 2 * i + 1;
+      const r = l + 1;
+      let m = i;
+      if (l < hf.length && less(l, m)) m = l;
+      if (r < hf.length && less(r, m)) m = r;
+      if (m === i) break;
+      swap(i, m);
+      i = m;
+    }
+    return top;
+  };
+
+  const h = (x: number, y: number) => (to ? (Math.abs(x - to.x) + Math.abs(y - to.y)) * 0.25 : 0);
+
+  push(h(from.x, from.y), start);
+  while (hcell.length > 0) {
+    const cur = pop();
     if (closed[cur]) continue;
     closed[cur] = 1;
+    if (cur === goal) break;
     const cx = cur % s.w;
-    const cy = Math.floor(cur / s.w);
+    const cy = (cur / s.w) | 0;
     for (let dy = -1; dy <= 1; dy++)
       for (let dx = -1; dx <= 1; dx++) {
         if (dx === 0 && dy === 0) continue;
@@ -51,45 +99,69 @@ export function findPath(s: GameState, from: Point, to: Point): Point[] {
         if (ng < g[ni]!) {
           g[ni] = ng;
           prev[ni] = cur;
-          open.push(ni);
+          push(ng + h(nx, ny), ni);
         }
       }
   }
+  return { g, prev };
+}
+
+/** Walk `prev` back from goal to start. Empty when the goal was never reached. */
+function reconstruct(s: GameState, prev: Int32Array, start: number, goal: number): Point[] {
   if (prev[goal] === -1 && goal !== start) return [];
   const path: Point[] = [];
   let cur = goal;
   while (cur !== start && cur !== -1) {
-    path.push({ x: cur % s.w, y: Math.floor(cur / s.w) });
+    path.push({ x: cur % s.w, y: (cur / s.w) | 0 });
     cur = prev[cur]!;
   }
   path.reverse();
   return path;
 }
 
-/** Best path to a Moore neighbour of (x,y), preferring non-burning stands. */
+/** A* over the move-cost grid. Returns the path excluding start, or [] if unreachable. */
+export function findPath(s: GameState, from: Point, to: Point): Point[] {
+  if (!inActive(s, to.x, to.y) || moveCost(s, to.x, to.y) === Number.POSITIVE_INFINITY) return [];
+  const { prev } = search(s, from, to);
+  return reconstruct(s, prev, idx(s, from.x, from.y), idx(s, to.x, to.y));
+}
+
+/**
+ * Best path to a Moore neighbour of (x,y), preferring non-burning stands.
+ * One single-source search covers all eight candidates — this used to run a
+ * full A* per neighbour and was the map-click freeze on the grown late-game
+ * sector.
+ */
 function pathAdjacentTo(s: GameState, from: Point, x: number, y: number): Point[] {
-  let best: Point[] = [];
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      if (from.x === x + dx && from.y === y + dy) return []; // already adjacent
+    }
+  const start = idx(s, from.x, from.y);
+  const { g, prev } = search(s, from, null);
+  let best = -1;
   let bestBurning = true;
+  let bestG = Number.POSITIVE_INFINITY;
   for (let dy = -1; dy <= 1; dy++)
     for (let dx = -1; dx <= 1; dx++) {
       if (dx === 0 && dy === 0) continue;
       const nx = x + dx;
       const ny = y + dy;
       if (!inActive(s, nx, ny)) continue;
-      if (from.x === nx && from.y === ny) return []; // already adjacent
+      const ni = idx(s, nx, ny);
+      if (ni === start || !Number.isFinite(g[ni]!)) continue;
       const burning = cellAt(s, nx, ny).state === 'burning';
-      const p = findPath(s, from, { x: nx, y: ny });
-      if (p.length === 0) continue;
       const better =
-        best.length === 0 ||
-        (bestBurning && !burning) ||
-        (burning === bestBurning && p.length < best.length);
+        best === -1 || (bestBurning && !burning) || (burning === bestBurning && g[ni]! < bestG);
       if (better) {
-        best = p;
+        best = ni;
         bestBurning = burning;
+        bestG = g[ni]!;
       }
     }
-  return best;
+  if (best === -1) return [];
+  return reconstruct(s, prev, start, best);
 }
 
 /**
