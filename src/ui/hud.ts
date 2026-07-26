@@ -1,7 +1,7 @@
 import { bomber as B, crewUnit as CU, truck as T, unlocks } from '../sim/balance';
 import type { Bomber, Crew, GameEvent, GameState, Stats, Truck } from '../sim/state';
 import { cellAt, inActive } from '../sim/state';
-import { briefingFacts, hotDayAt, reveals, unlockNotes, warming } from './facts';
+import { briefingFacts, hotDayAt, returnPeriodYears, reveals, unlockNotes, warming } from './facts';
 
 export type Tool = 'engine' | 'evac' | 'bomber' | 'tower' | 'crew';
 
@@ -99,6 +99,7 @@ export class Hud {
   private year = el<HTMLDivElement>('year');
   private bTemp = el<HTMLParagraphElement>('b-temp');
   private bTempAvg = el<HTMLSpanElement>('b-temp-avg');
+  private bTempFreq = el<HTMLSpanElement>('b-temp-freq');
   private bTempMax = el<HTMLSpanElement>('b-temp-max');
   private windarrow = el<HTMLSpanElement>('windarrow');
   private windspeed = el<HTMLSpanElement>('windspeed');
@@ -368,10 +369,13 @@ export class Hud {
     const avg = warming[s.seasonYear];
     this.bTemp.hidden = avg === undefined;
     if (avg !== undefined) {
+      const droughtYears = returnPeriodYears('drought', s.seasonYear);
+      const heatYears = returnPeriodYears('heat', s.seasonYear);
       this.bTempAvg.textContent = `≈ +${avg} °C above pre-industrial — the global average (IPCC AR6, middle-of-the-road pathway)`;
-      this.bTempMax.textContent = `Averages hide the peaks: summer's hottest days here run ≈ +${hotDayAt(s.seasonYear)} °C.`;
+      this.bTempFreq.textContent = `In plain terms: the drought that used to strike once a decade now returns every ~${droughtYears} years — the once-a-decade heatwave, every ~${heatYears}.`;
+      this.bTempMax.textContent = `And averages hide the peaks: summer's hottest days here run ≈ +${hotDayAt(s.seasonYear)} °C.`;
       this.bTemp.title =
-        'Central estimate vs pre-industrial for a middle-of-the-road emissions pathway (IPCC AR6, ≈SSP2-4.5). A global average understates a fire season: land warms faster than the mean, and hot extremes rise roughly 1.5–2× faster (IPCC AR6 WG1) — the peak-day figure uses the low end of that range.';
+        'Central estimate vs pre-industrial for a middle-of-the-road emissions pathway (IPCC AR6, ≈SSP2-4.5). Return periods interpolate the AR6 SPM frequency increases for once-per-decade droughts (drying regions) and heat events over land. A global average understates a fire season: land warms faster than the mean, and hot extremes rise roughly 1.5–2× faster — the peak-day figure uses the low end of that range.';
     }
     this.bGrowth.hidden = !grew;
     const unlock = unlockNotes[s.seasonYear];

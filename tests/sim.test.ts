@@ -937,6 +937,25 @@ describe('firefighter danger rule', () => {
 });
 
 describe('warming display data', () => {
+  it('return periods shrink as the campaign warms (AR6 frequency interpolation)', async () => {
+    const { returnPeriodYears } = await import('../src/ui/facts');
+    // Exact AR6 anchors: at +1.5 °C (2035), once-per-decade droughts run 2.0x
+    // (return ~5 years) and heat events 4.1x (return ~2.5 years).
+    expect(returnPeriodYears('drought', 2035)).toBe(5);
+    expect(returnPeriodYears('heat', 2035)).toBe(2.5);
+    let prevD = Number.POSITIVE_INFINITY;
+    let prevH = Number.POSITIVE_INFINITY;
+    for (const season of seasons) {
+      const d = returnPeriodYears('drought', season.year);
+      const h = returnPeriodYears('heat', season.year);
+      expect(d).toBeLessThanOrEqual(prevD);
+      expect(h).toBeLessThanOrEqual(prevH);
+      expect(h).toBeLessThan(d); // heat extremes outpace drought at every level
+      prevD = d;
+      prevH = h;
+    }
+  });
+
   it('every season year has a central warming estimate, monotonically rising', async () => {
     const { warming, hotDayAt, hotDayFactor } = await import('../src/ui/facts');
     let prev = 0;

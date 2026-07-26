@@ -68,7 +68,7 @@ reliefRains    : guaranteed through 2035, 50 % 2040–2055, none from 2060
 nightWindows   : from 2055 (60-tick windows: spread ×0.9, detection delay ×2)
 ```
 
-The anchor row is surfaced in-game on the season briefing card, under the year: the season's central estimate ("≈ +1.75 °C — the global average") with a second line estimating peak summer days at **1.5× the mean** — the low end of AR6 WG1's finding that hot extremes over many land regions warm at roughly 1.5–2× the global-mean rate (at +2 °C global, a 1-in-10-year heat event runs ≈ +2.6 °C). Both lines carry the "≈" honesty marker; the tooltip names the pathway and the source.
+The anchor row is surfaced in-game on the season briefing card, under the year: the season's central estimate ("≈ +1.75 °C — the global average") with a second line estimating peak summer days at **1.5× the mean** — the low end of AR6 WG1's finding that hot extremes over many land regions warm at roughly 1.5–2× the global-mean rate (at +2 °C global, a 1-in-10-year heat event runs ≈ +2.6 °C). A plain-language line translates the level into lived terms via the AR6 SPM frequency table (Fig. SPM.6), interpolated per season: how often the old once-a-decade drought and heatwave now return ("every ~4 years / every ~2"). All lines carry the "≈" honesty marker; the tooltip names the pathway and the sources.
 
 Because consecutive seasons are 4–5 years apart, each one-step increase in `t` represents half a decade of projected change. The anchors are real-pace; the sim drivers *amplify* the anchored trends for legibility (a playable fire must escalate faster than a fire-weather index does), and each played season is the worst of its window — the drama is authored on top of the trend, never instead of it.
 

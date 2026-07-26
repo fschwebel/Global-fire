@@ -54,6 +54,49 @@ export function hotDayAt(year: number): number {
   return Math.round((warming[year] ?? 0) * hotDayFactor * 10) / 10;
 }
 
+/**
+ * Frequency multipliers vs 1850–1900 for once-per-decade events, by global
+ * warming level (IPCC AR6 SPM, Fig. SPM.6): agricultural/ecological drought
+ * in drying regions, and heat events over land.
+ */
+const freqAnchors: Record<'drought' | 'heat', [number, number][]> = {
+  drought: [
+    [1.0, 1.7],
+    [1.5, 2.0],
+    [2.0, 2.4],
+    [4.0, 4.1],
+  ],
+  heat: [
+    [1.0, 2.8],
+    [1.5, 4.1],
+    [2.0, 5.6],
+    [4.0, 9.4],
+  ],
+};
+
+function interpolate(points: [number, number][], x: number): number {
+  const first = points[0]!;
+  const last = points[points.length - 1]!;
+  if (x <= first[0]) return first[1];
+  if (x >= last[0]) return last[1];
+  for (let i = 1; i < points.length; i++) {
+    const [x1, y1] = points[i - 1]!;
+    const [x2, y2] = points[i]!;
+    if (x <= x2) return y1 + ((x - x1) / (x2 - x1)) * (y2 - y1);
+  }
+  return last[1];
+}
+
+/**
+ * How often a once-a-decade event returns at this season's warming level,
+ * in years rounded to the nearest half — the plain-language form of the
+ * AR6 frequency multipliers.
+ */
+export function returnPeriodYears(kind: 'drought' | 'heat', year: number): number {
+  const mult = interpolate(freqAnchors[kind], warming[year] ?? 1);
+  return Math.round((10 / mult) * 2) / 2;
+}
+
 /** Season year each loss counter joins the stat bar (canon: progression doc §1.3). */
 export const reveals = {
   animals: 2030,
