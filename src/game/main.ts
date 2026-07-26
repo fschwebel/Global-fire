@@ -104,4 +104,7 @@ document.addEventListener('visibilitychange', () => {
 
 window.__gf = { getState: () => state };
 
+const version = document.getElementById('version');
+if (version) version.textContent = `v${__BUILD__}`;
+
 loop.start();
