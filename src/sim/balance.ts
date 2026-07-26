@@ -183,12 +183,16 @@ export const danger = {
   graceTicks: 3,
   /** How far the escape search looks for a safe tile (Chebyshev). */
   escapeRadius: 12,
+  /** A dry-tank or exhausted crew cannot run as far — smaller pockets trap them. */
+  wearyEscapeRadius: 6,
+  /** A dry tank also cuts the warning grace: no water, no margin. */
+  dryTankGracePenalty: 1,
   /** Fatigue: +1 per danger tick, decaying this much per calm tick — short
    *  respites do not reset it. */
-  fatigueDecay: 0.25,
+  fatigueDecay: 0.15,
   /** Every this much accumulated fatigue shaves one tick off the grace (min 1):
    *  a crew run ragged has less margin before the fire closes. */
-  fatigueGraceEvery: 10,
+  fatigueGraceEvery: 6,
   /** An escape may not squeeze through tiles flanked by this many heavy cells. */
   corridorFlanks: 2,
 };

@@ -516,7 +516,7 @@ function isSafeTile(s: GameState, x: number, y: number): boolean {
  * passable, non-burning ground within the escape radius. The unit's own tile
  * is exempt from the non-burning requirement (they can run off it).
  */
-function trapped(s: GameState, u: { x: number; y: number }): boolean {
+function trapped(s: GameState, u: { x: number; y: number }, radius: number): boolean {
   const seen = new Set<number>();
   const queue: Point[] = [{ x: u.x, y: u.y }];
   seen.add(idx(s, u.x, u.y));
@@ -529,7 +529,7 @@ function trapped(s: GameState, u: { x: number; y: number }): boolean {
         const nx = p.x + dx;
         const ny = p.y + dy;
         if (!inActive(s, nx, ny)) continue;
-        if (Math.max(Math.abs(nx - u.x), Math.abs(ny - u.y)) > D.escapeRadius) continue;
+        if (Math.max(Math.abs(nx - u.x), Math.abs(ny - u.y)) > radius) continue;
         const i = idx(s, nx, ny);
         if (seen.has(i)) continue;
         const c = cellAt(s, nx, ny);
@@ -562,10 +562,17 @@ function dangerSweep(
     }
     u.dangerTicks += 1;
     u.fatigue += 1;
-    // Exhaustion erodes the margin: repeated danger spells shorten the grace.
-    const grace = Math.max(1, D.graceTicks - Math.floor(u.fatigue / D.fatigueGraceEvery));
+    // Exhaustion and a dry tank erode the margin: less warning, and weary
+    // legs cannot reach as far — smaller pockets become lethal.
+    const weary = tankEmpty || u.fatigue >= D.fatigueGraceEvery;
+    const grace = Math.max(
+      1,
+      D.graceTicks -
+        (tankEmpty ? D.dryTankGracePenalty : 0) -
+        Math.floor(u.fatigue / D.fatigueGraceEvery),
+    );
     if (u.dangerTicks === grace) events.push({ type: 'crewDanger', unit: kind, unitId: u.id });
-    if (u.dangerTicks >= grace && trapped(s, u)) {
+    if (u.dangerTicks >= grace && trapped(s, u, weary ? D.wearyEscapeRadius : D.escapeRadius)) {
       lost.push(u.id);
       s.stats.firefightersLost += crewSize;
       events.push({ type: 'unitLost', unit: kind, unitId: u.id, firefighters: crewSize });

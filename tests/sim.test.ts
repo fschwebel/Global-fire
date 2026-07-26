@@ -1425,3 +1425,29 @@ describe('upwind random ignitions', () => {
     expect(sum / n).toBeLessThan(0.42);
   });
 });
+
+describe('weary crews', () => {
+  it('an exhausted, dry-tank engine gets almost no warning before being overrun', () => {
+    const s = createSeason(42, 4); // 2045
+    const t = s.trucks[0]!;
+    t.x = s.bounds.x0 + 12;
+    t.y = s.bounds.y0 + 12;
+    t.water = 0;
+    t.fatigue = 12; // two shaves (every 6) + dry-tank penalty → grace floors at 1
+    // Full encirclement, radius 3.
+    for (let dy = -3; dy <= 3; dy++)
+      for (let dx = -3; dx <= 3; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const c = s.grid[(t.y + dy) * s.w + (t.x + dx)]!;
+        if (c.type === 'water' || c.type === 'rock') continue;
+        c.type = 'dense';
+        c.state = 'burning';
+        c.intensity = 8;
+        c.fuel = 80;
+      }
+    let lostAt = -1;
+    for (let i = 1; i <= 4 && lostAt === -1; i++)
+      if (step(s).some((e) => e.type === 'unitLost' && e.unit === 'engine')) lostAt = i;
+    expect(lostAt).toBe(1); // grace 1: overrun on the first danger tick
+  });
+});
