@@ -6,7 +6,7 @@ import type { TileType } from './state';
  */
 export const balanceVersion = 1;
 
-export const TICK_MS = 650; // ~1.5 Hz — a calmer overall pace; balance is tick-based and unaffected
+export const TICK_MS = 800; // 1.25 Hz — an unhurried pace; balance is tick-based and unaffected
 
 export const spread = {
   P_BASE: 0.22,
@@ -43,6 +43,14 @@ export const burn = {
   // to the fire's rear and weaken containment. Wall-clock burn length is
   // governed by TICK_MS instead.
   fuelMoisture: { base: 1.0, slope: 0.7 },
+};
+
+export const ignitionSchedule = {
+  firstTick: 10,
+  /** Ticks between scripted ignitions: wide in the tutorial (sequential crises), compressing as seasons harden. */
+  staggerBase: 90,
+  staggerPerSeason: 6,
+  staggerMin: 40,
 };
 
 export const detection = {
@@ -111,7 +119,7 @@ export const seasons: SeasonParams[] = [
     t: 0,
     dryness: 0.32,
     windStr: 0.2,
-    spreadMult: 0.85,
+    spreadMult: 0.82,
     scriptedIgnitions: 3,
     randomIgnitionRate: 0,
     seasonLen: 300,

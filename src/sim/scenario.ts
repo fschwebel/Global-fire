@@ -1,4 +1,4 @@
-import { map as M, truck as T, seasons } from './balance';
+import { ignitionSchedule as IG, map as M, truck as T, seasons } from './balance';
 import { hash2, mulberry32 } from './rng';
 import type { Cell, GameState, Point, SeasonScript, TileType } from './state';
 import { idx, inBounds } from './state';
@@ -250,8 +250,9 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
     if (chosen.length >= params.scriptedIgnitions) break;
   }
   while (chosen.length < params.scriptedIgnitions) chosen.push({ x: 5, y: 5 });
+  const stagger = Math.max(IG.staggerMin, IG.staggerBase - params.t * IG.staggerPerSeason);
   chosen.forEach((at, i) => {
-    script.ignitions.push({ tick: 10 + i * 60, x: at.x, y: at.y, done: false });
+    script.ignitions.push({ tick: IG.firstTick + i * stagger, x: at.x, y: at.y, done: false });
   });
 
   script.windShifts.push({
