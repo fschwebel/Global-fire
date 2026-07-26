@@ -617,6 +617,7 @@ export function createSeason(
       target: null,
       trail: [{ x: center.x, y: center.y }],
       dangerTicks: 0,
+      fatigue: 0,
     })),
     villages: villages.map((v, i) => ({
       id: i + 1,
@@ -655,6 +656,7 @@ export function createSeason(
               cutProgress: 0,
               trail: [{ x: center.x, y: center.y }],
               dangerTicks: 0,
+              fatigue: 0,
             },
           ]
         : [],

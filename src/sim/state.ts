@@ -63,6 +63,8 @@ export interface Truck {
   trail: Point[];
   /** Consecutive ticks in danger (burning tile / heavy fire beside) — the danger rule counts these. */
   dangerTicks: number;
+  /** Accumulated exhaustion from repeated danger spells; decays slowly during respite. */
+  fatigue: number;
 }
 
 export interface Village {
@@ -108,6 +110,8 @@ export interface Crew {
   trail: Point[];
   /** Consecutive ticks in danger — see Truck.dangerTicks. */
   dangerTicks: number;
+  /** Accumulated exhaustion — see Truck.fatigue. */
+  fatigue: number;
 }
 
 export interface Wind {

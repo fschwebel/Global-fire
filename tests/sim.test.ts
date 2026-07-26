@@ -1340,3 +1340,88 @@ describe('scripted ignition relocation', () => {
     expect(s.grid[first.y * s.w + first.x]!.state).toBe('burnt'); // the site stayed ash
   });
 });
+
+describe('exhaustion', () => {
+  it('repeated danger spells shorten the warning grace, even across a respite', () => {
+    const s = createSeason(42, 4); // 2045
+    const t = s.trucks[0]!;
+    t.x = s.bounds.x0 + 12;
+    t.y = s.bounds.y0 + 12;
+    t.water = 0; // dry tank: one weak fire beside is danger
+    const fireIdx = (t.y - 1) * s.w + (t.x - 1);
+    const light = () => {
+      const c = s.grid[fireIdx]!;
+      c.type = 'grass';
+      c.state = 'burning';
+      c.intensity = 2;
+      c.fuel = 99;
+    };
+    const snuffAll = (keepFire: boolean) => {
+      s.grid.forEach((c, ci) => {
+        if (c.state !== 'burning') return;
+        if (keepFire && ci === fireIdx) return;
+        c.state = 'unburnt';
+        c.intensity = 0;
+        c.igniteAge = 0;
+        c.detected = false;
+      });
+      if (keepFire) light();
+    };
+
+    // Spell 1: 15 danger ticks builds ~15 fatigue (warning at the normal grace of 3).
+    light();
+    for (let i = 0; i < 15; i++) {
+      step(s);
+      snuffAll(true);
+    }
+    expect(t.fatigue).toBeGreaterThanOrEqual(14);
+
+    // Respite: 8 calm ticks decay only a couple of points — no reset.
+    snuffAll(false);
+    for (let i = 0; i < 8; i++) {
+      step(s);
+      snuffAll(false);
+    }
+    expect(t.dangerTicks).toBe(0);
+    expect(t.fatigue).toBeGreaterThan(10);
+
+    // Spell 2: the exhausted crew is warned within 2 ticks instead of 3.
+    light();
+    let warnedAt = -1;
+    for (let i = 1; i <= 3 && warnedAt === -1; i++) {
+      if (step(s).some((e) => e.type === 'crewDanger' && e.unit === 'engine')) warnedAt = i;
+      snuffAll(true);
+    }
+    expect(warnedAt).toBeGreaterThan(0);
+    expect(warnedAt).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('upwind random ignitions', () => {
+  it('background fires bias toward the windward side of the sector', () => {
+    // Wind blowing due east: upwind = low x. Sample many seeds' first random fire.
+    let sum = 0;
+    let n = 0;
+    for (let seed = 1; seed <= 30; seed++) {
+      const s = createSeason(seed, 3); // 2040: randomIgnitionRate > 0
+      s.randomIgnitionRate = 1; // fire every tick, for sampling
+      s.wind.dir = 0;
+      for (const ig of s.script.ignitions) ig.tick = 900; // keep scripted fires out
+      s.script.drought = null;
+      const before = new Set<number>();
+      s.grid.forEach((c, i) => {
+        if (c.state === 'burning') before.add(i);
+      });
+      step(s);
+      s.grid.forEach((c, i) => {
+        if (c.state === 'burning' && !before.has(i)) {
+          sum += ((i % s.w) - s.bounds.x0) / (s.bounds.x1 - s.bounds.x0);
+          n++;
+        }
+      });
+    }
+    expect(n).toBeGreaterThan(15); // most seeds ignited something
+    // Unbiased sampling would average ~0.5; best-of-3 upwind pulls it well below.
+    expect(sum / n).toBeLessThan(0.42);
+  });
+});

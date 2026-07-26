@@ -556,12 +556,16 @@ function dangerSweep(
     const tankEmpty = kind === 'engine' && (u as Truck).water <= 0;
     if (!inDanger(s, u, neighbors, tankEmpty)) {
       u.dangerTicks = 0;
+      // Respite recovers exhaustion slowly — a few calm seconds reset nothing.
+      u.fatigue = Math.max(0, u.fatigue - D.fatigueDecay);
       continue;
     }
     u.dangerTicks += 1;
-    if (u.dangerTicks === D.graceTicks)
-      events.push({ type: 'crewDanger', unit: kind, unitId: u.id });
-    if (u.dangerTicks >= D.graceTicks && trapped(s, u)) {
+    u.fatigue += 1;
+    // Exhaustion erodes the margin: repeated danger spells shorten the grace.
+    const grace = Math.max(1, D.graceTicks - Math.floor(u.fatigue / D.fatigueGraceEvery));
+    if (u.dangerTicks === grace) events.push({ type: 'crewDanger', unit: kind, unitId: u.id });
+    if (u.dangerTicks >= grace && trapped(s, u)) {
       lost.push(u.id);
       s.stats.firefightersLost += crewSize;
       events.push({ type: 'unitLost', unit: kind, unitId: u.id, firefighters: crewSize });

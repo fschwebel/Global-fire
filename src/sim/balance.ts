@@ -59,6 +59,9 @@ export const ignitionSchedule = {
   windDownTicks: 15,
   /** A scripted fire whose site burnt over relocates to the nearest fuel within this radius. */
   relocateRadius: 8,
+  /** Random ignitions sample this many sites and take the most upwind one —
+   *  a background fire tends to get the sector as runway under strong wind. */
+  windBiasCandidates: 3,
 };
 
 export const detection = {
@@ -80,7 +83,7 @@ export const truck = {
     dryriver: 1.6, // a rough bed, but crossable
   } satisfies Record<TileType, number>,
   extinguishPerTick: 4, // intensity removed per tick (cell regrows +1 → net −3)
-  waterCapacity: 22, // 25% down from 30 — tanks run dry sooner, and dry tanks are danger
+  waterCapacity: 16, // twice cut by 25% (30 → 22 → 16): every engagement is on a short leash
   refillPerTick: 6,
   wetTimerOnExtinguish: 40, // fought ground holds — player work must visibly stick
   crew: 4,
@@ -180,6 +183,12 @@ export const danger = {
   graceTicks: 3,
   /** How far the escape search looks for a safe tile (Chebyshev). */
   escapeRadius: 12,
+  /** Fatigue: +1 per danger tick, decaying this much per calm tick — short
+   *  respites do not reset it. */
+  fatigueDecay: 0.25,
+  /** Every this much accumulated fatigue shaves one tick off the grace (min 1):
+   *  a crew run ragged has less margin before the fire closes. */
+  fatigueGraceEvery: 10,
   /** An escape may not squeeze through tiles flanked by this many heavy cells. */
   corridorFlanks: 2,
 };

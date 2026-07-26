@@ -200,9 +200,26 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
       }
     }
     if (s.randomIgnitionRate > 0 && s.rng() < s.randomIgnitionRate) {
-      const x = s.bounds.x0 + Math.floor(s.rng() * (s.bounds.x1 - s.bounds.x0));
-      const y = s.bounds.y0 + Math.floor(s.rng() * (s.bounds.y1 - s.bounds.y0));
-      const c = cellAt(s, x, y);
+      // Upwind bias: of a few candidate sites, take the one sitting farthest
+      // against the wind — a background fire tends to get the sector as runway.
+      const wx = Math.cos(s.wind.dir);
+      const wy = Math.sin(s.wind.dir);
+      const cx = (s.bounds.x0 + s.bounds.x1) / 2;
+      const cy = (s.bounds.y0 + s.bounds.y1) / 2;
+      let bx = s.bounds.x0;
+      let by = s.bounds.y0;
+      let bestScore = Number.POSITIVE_INFINITY;
+      for (let k = 0; k < ignitionSchedule.windBiasCandidates; k++) {
+        const x = s.bounds.x0 + Math.floor(s.rng() * (s.bounds.x1 - s.bounds.x0));
+        const y = s.bounds.y0 + Math.floor(s.rng() * (s.bounds.y1 - s.bounds.y0));
+        const score = (x - cx) * wx + (y - cy) * wy;
+        if (score < bestScore) {
+          bestScore = score;
+          bx = x;
+          by = y;
+        }
+      }
+      const c = cellAt(s, bx, by);
       if (flammable(c)) ignite(s, c, false);
     }
   }

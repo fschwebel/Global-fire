@@ -1,4 +1,4 @@
-import { bomber as B, crewUnit as CU, truck as T, unlocks } from '../sim/balance';
+import { bomber as B, crewUnit as CU, danger as DR, truck as T, unlocks } from '../sim/balance';
 import type { Bomber, Crew, GameEvent, GameState, Stats, Truck } from '../sim/state';
 import { cellAt, inActive } from '../sim/state';
 import { briefingFacts, hotDayAt, returnPeriodYears, reveals, unlockNotes, warming } from './facts';
@@ -289,7 +289,9 @@ export class Hud {
       card.classList.toggle('pinned', t.id === pinnedTruckId);
       card.classList.toggle('danger', t.dangerTicks > 0);
       const status = card.querySelector<HTMLSpanElement>('.status');
-      if (status) status.textContent = engineStatus(s, t);
+      if (status)
+        status.textContent =
+          engineStatus(s, t) + (t.fatigue >= DR.fatigueGraceEvery ? ' · exhausted' : '');
       const bar = card.querySelector<HTMLDivElement>('.waterbar > div');
       if (bar) bar.style.width = `${(t.water / T.waterCapacity) * 100}%`;
     }
@@ -313,7 +315,9 @@ export class Hud {
       const status = card.querySelector<HTMLSpanElement>('.status');
       if (status)
         status.textContent =
-          crewStatus(c) + (c.jobs.length > 1 ? ` · ${c.jobs.length} cuts queued` : '');
+          crewStatus(c) +
+          (c.jobs.length > 1 ? ` · ${c.jobs.length} cuts queued` : '') +
+          (c.fatigue >= DR.fatigueGraceEvery ? ' · exhausted' : '');
     }
 
     this.selection.textContent =
