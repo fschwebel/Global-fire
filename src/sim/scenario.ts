@@ -73,8 +73,11 @@ export function generateMap(seed: number): { grid: Cell[]; center: Point; villag
   }
 
   // 2. One river, west → east, as a biased random walk (hard barrier + refill).
+  //    Its row per column is remembered so the roads can respect it.
+  const riverYAt: number[] = [];
   let ry = Math.floor(M.H * (0.3 + rng() * 0.4));
   for (let x = 0; x < M.W; x++) {
+    riverYAt.push(ry);
     for (let w = 0; w < 2; w++) {
       const yy = ry + w;
       if (yy >= 0 && yy < M.H) setBase(grid[yy * M.W + x]!, 'water');
@@ -85,37 +88,71 @@ export function generateMap(seed: number): { grid: Cell[]; center: Point; villag
   }
 
   // 3. Trunk roads: an east–west and a north–south road cross the whole world
-  //    (leaving it at four edges, as real regional roads do), meeting at the
-  //    meeting near the centre. Water crossings become bridges (paved).
+  //    (leaving it at four edges, as real regional roads do), meeting near the
+  //    centre. Turns are spaced out so the road reads one tile wide, with only
+  //    isolated L-corners. The east–west road never crosses the river — when
+  //    the river wanders into its corridor it follows the bank instead — so the
+  //    only trunk bridge is the north–south road's single cut.
   const pave = (x: number, y: number) => {
     const cell = grid[y * M.W + x]!;
     if (cell.type !== 'house') setBase(cell, 'road');
   };
   const cx0 = Math.floor(M.W / 2);
   const cy0 = Math.floor(M.H / 2);
-  let ty = cy0;
+  // The E–W road runs on whichever side of the river the centre row falls.
+  const northSide = cy0 <= riverYAt[cx0]!;
+  const bankClamp = (x: number, y: number): number =>
+    northSide ? Math.min(y, riverYAt[x]! - 1) : Math.max(y, riverYAt[x]! + 2);
+  let ty = bankClamp(0, cy0);
   const ewRoad: Point[] = [];
+  let lastTurnX = -9;
   for (let x = 0; x < M.W; x++) {
+    ty = bankClamp(x, ty);
     pave(x, ty);
     ewRoad.push({ x, y: ty });
-    // Gentle drift that steers back toward the centre line.
+    // Gentle drift that steers back toward the centre line — spaced turns only.
     const r = rng();
     if (x < M.W - 1) {
-      if (r < 0.22 && ty > 3 && ty >= cy0 - 4) ty--;
-      else if (r > 0.78 && ty < M.H - 4 && ty <= cy0 + 4) ty++;
-      if (ty !== ewRoad[ewRoad.length - 1]!.y) pave(x, ty); // keep the road 8-connected → diagonal-free
+      let next = ty;
+      if (x - lastTurnX >= 3) {
+        if (r < 0.22 && ty > 3 && ty >= cy0 - 4) next = ty - 1;
+        else if (r > 0.78 && ty < M.H - 4 && ty <= cy0 + 4) next = ty + 1;
+      }
+      next = bankClamp(x + 1, next);
+      // The bank can force a step even during a turn cooldown; corner-pave any
+      // single step to keep the road 4-connected, walk straight rows otherwise.
+      if (next === ty + 1 || next === ty - 1) {
+        pave(x, next);
+        lastTurnX = x;
+        ty = next;
+      } else if (next !== ty) {
+        for (let yy = Math.min(ty, next); yy <= Math.max(ty, next); yy++) pave(x, yy);
+        lastTurnX = x;
+        ty = next;
+      }
     }
   }
   let tx = cx0;
   const nsRoad: Point[] = [];
+  let lastTurnY = -9;
   for (let y = 0; y < M.H; y++) {
     pave(tx, y);
     nsRoad.push({ x: tx, y });
     const r = rng();
     if (y < M.H - 1) {
-      if (r < 0.22 && tx > 3 && tx >= cx0 - 4) tx--;
-      else if (r > 0.78 && tx < M.W - 4 && tx <= cx0 + 4) tx++;
-      if (tx !== nsRoad[nsRoad.length - 1]!.x) pave(tx, y);
+      // No drifting on or beside the river: the bridge stays a clean 1-wide cut.
+      const nearRiver = Math.abs(y - riverYAt[tx]!) <= 2 || Math.abs(y + 1 - riverYAt[tx]!) <= 2;
+      if (y - lastTurnY >= 3 && !nearRiver) {
+        if (r < 0.22 && tx > 3 && tx >= cx0 - 4) {
+          tx--;
+          pave(tx, y);
+          lastTurnY = y;
+        } else if (r > 0.78 && tx < M.W - 4 && tx <= cx0 + 4) {
+          tx++;
+          pave(tx, y);
+          lastTurnY = y;
+        }
+      }
     }
   }
 
