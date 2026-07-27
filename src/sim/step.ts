@@ -177,6 +177,9 @@ export function step(s: GameState, commands: Command[] = []): GameEvent[] {
   }
   const rainsArrived = s.tick >= s.seasonLen;
   if (rainsArrived) {
+    // The season is over: the rains hit twice per tick so the last fronts die
+    // in a beat or two — a long quench reads as the debrief hanging.
+    applyRainTick(s);
     applyRainTick(s);
     s.rainTicks = Math.max(s.rainTicks, 2);
   }

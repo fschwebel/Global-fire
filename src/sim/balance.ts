@@ -53,13 +53,13 @@ export const burn = {
 export const ignitionSchedule = {
   firstTick: 10,
   /** Ticks between scripted ignitions: wide in the tutorial (sequential crises), compressing as seasons harden. */
-  staggerBase: 90,
+  staggerBase: 76,
   staggerPerSeason: 6,
-  staggerMin: 40,
+  staggerMin: 34,
   /** When the valley is quiet and more fires are scheduled, pull the next one to at most this many ticks away. */
   quietGap: 6,
   /** Quiet ticks (schedule done, nothing burning) before the season winds down and ends. */
-  windDownTicks: 15,
+  windDownTicks: 6,
   /** A scripted fire whose site burnt over relocates to the nearest fuel within this radius. */
   relocateRadius: 8,
   /** Random ignitions sample this many sites and take the most upwind one —
