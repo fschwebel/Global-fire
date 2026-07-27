@@ -6,6 +6,14 @@ import { dropLineCells } from '../sim/units';
 import { Hud, type Tool } from '../ui/hud';
 import { L, applyStaticText } from '../ui/i18n';
 import { MapViewport } from '../ui/viewport';
+import {
+  trackCampaignFinished,
+  trackCampaignRestarted,
+  trackDrought,
+  trackSeasonCompleted,
+  trackSeasonStarted,
+  trackUnitLost,
+} from './analytics';
 import { simulateUnfoughtCampaign } from './counterfactual';
 import { GameLoop } from './loop';
 import { clearCampaign, loadCampaign, saveCampaign } from './save';
@@ -46,6 +54,8 @@ function addStats(a: Stats, b: Stats): Stats {
 let seasonIndex = 0;
 let campaign = zeroStats();
 let debriefIsFinal = false;
+/** True when this boot picked up a saved campaign — tagged on the next season_started. */
+let bootResumed = false;
 
 function bootState(): GameState {
   const saved = loadCampaign();
@@ -71,6 +81,7 @@ function bootState(): GameState {
         // regrowth clock re-populates any lot that has since been rebuilt.
         if (cell.type === 'house') cell.occupants = 0;
       }
+      bootResumed = true;
       return createSeason(CAMPAIGN_SEED, seasonIndex, pristine.grid, saved.towers);
     } catch {
       clearCampaign(); // a damaged save must never brick the boot
@@ -121,9 +132,12 @@ const loop = new GameLoop(
     pendingOrders = [];
     renderer.setPendingOrders(null);
     hud.handle(events);
-    for (const ev of events)
-      if (ev.type === 'unitLost' && ev.unit === 'engine' && ev.unitId === pinnedTruckId)
-        pinnedTruckId = null;
+    for (const ev of events) {
+      if (ev.type === 'unitLost') {
+        trackUnitLost(ev.unit, state.seasonYear);
+        if (ev.unit === 'engine' && ev.unitId === pinnedTruckId) pinnedTruckId = null;
+      } else if (ev.type === 'riverDry') trackDrought(state.seasonYear);
+    }
     const end = events.find((e) => e.type === 'seasonEnded');
     if (end && end.type === 'seasonEnded') onSeasonEnd(end.report);
   },
@@ -156,6 +170,8 @@ function onSeasonEnd(report: Stats): void {
   setSpeed(0); // nothing should animate or burn CPU behind the debrief
   campaign = addStats(campaign, report);
   debriefIsFinal = seasonIndex >= LAST_SEASON;
+  trackSeasonCompleted(state.seasonYear, seasonIndex, report);
+  if (debriefIsFinal) trackCampaignFinished(campaign);
   // The final save is cleared only when the player leaves the final screen —
   // a refresh at the 2070 debrief resumes the finale instead of losing the run.
   if (!debriefIsFinal)
@@ -369,6 +385,8 @@ document.addEventListener('visibilitychange', () => {
   if (overlayJustClosed()) return;
   hud.hideBriefing();
   overlayClosedAt = performance.now();
+  trackSeasonStarted(state.seasonYear, seasonIndex, bootResumed);
+  bootResumed = false;
   setSpeed(1);
 });
 
@@ -376,6 +394,7 @@ document.addEventListener('visibilitychange', () => {
   if (overlayJustClosed()) return;
   overlayClosedAt = performance.now();
   if (debriefIsFinal) {
+    trackCampaignRestarted();
     clearCampaign();
     campaign = zeroStats();
     debriefIsFinal = false;
