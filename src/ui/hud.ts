@@ -108,6 +108,7 @@ export class Hud {
   private alerts = el<HTMLDivElement>('alerts');
   private seasonfill = el<HTMLDivElement>('seasonfill');
   private selection = el<HTMLDivElement>('selection');
+  private splash = el<HTMLDivElement>('splash');
   private briefing = el<HTMLDivElement>('briefing');
   private bYear = el<HTMLHeadingElement>('b-year');
   private bGrowth = el<HTMLParagraphElement>('b-growth');
@@ -415,9 +416,18 @@ export class Hud {
     if (bar) bar.style.width = '0%';
   }
 
-  /** True while a full-screen overlay (briefing or debrief) covers the game. */
+  /** True while a full-screen overlay (splash, briefing or debrief) covers the game. */
   overlayVisible(): boolean {
-    return !this.briefing.hidden || !this.debrief.hidden;
+    return !this.splash.hidden || !this.briefing.hidden || !this.debrief.hidden;
+  }
+
+  /** First-contact splash for brand-new players; sits above the briefing. */
+  showSplash(): void {
+    this.splash.hidden = false;
+  }
+
+  hideSplash(): void {
+    this.splash.hidden = true;
   }
 
   showBriefing(grew: boolean): void {

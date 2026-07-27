@@ -286,6 +286,65 @@ body {
   min-height: 20px;
 }
 
+/* First-contact splash: a dispatch from command, a wordmark, one big button.
+   Sits above the briefing; dismissing it reveals the normal season flow. */
+#splash {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  text-align: center;
+  padding: 24px;
+  background: radial-gradient(ellipse at 50% 118%, rgba(224, 96, 32, 0.3), transparent 62%),
+    #080a08;
+}
+
+#splash[hidden] {
+  display: none;
+}
+
+#s-cmd {
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #9aa392;
+}
+
+#s-title {
+  font-size: clamp(38px, 8vw, 64px);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #e8e4da;
+  text-shadow: 0 0 28px rgba(224, 128, 32, 0.35);
+}
+
+#s-welcome {
+  max-width: 430px;
+  font-size: 16px;
+  line-height: 1.65;
+  color: #cdd8c2;
+}
+
+#btn-splash {
+  background: #a84a18;
+  color: #f4ede0;
+  border: 1px solid #e07020;
+  padding: 16px 46px;
+  font-size: 19px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+#btn-splash:hover {
+  background: #c25a1e;
+}
+
 #briefing,
 #debrief {
   position: fixed;

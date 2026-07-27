@@ -381,6 +381,27 @@ document.addEventListener('visibilitychange', () => {
 
 // --- Season flow -----------------------------------------------------------
 
+// The splash shows once ever: dismissing it is remembered across sessions.
+const INTRO_KEY = 'global-fire-intro-seen';
+
+function introSeen(): boolean {
+  try {
+    return localStorage.getItem(INTRO_KEY) === '1';
+  } catch {
+    return true; // storage unavailable — never trap the player behind the splash
+  }
+}
+
+(document.getElementById('btn-splash') as HTMLButtonElement).addEventListener('click', () => {
+  try {
+    localStorage.setItem(INTRO_KEY, '1');
+  } catch {
+    // best effort — the splash simply shows again next visit
+  }
+  hud.hideSplash();
+  overlayClosedAt = performance.now(); // a double-tap must not fall through to Begin season
+});
+
 (document.getElementById('btn-begin') as HTMLButtonElement).addEventListener('click', () => {
   if (overlayJustClosed()) return;
   hud.hideBriefing();
@@ -409,8 +430,10 @@ window.__gf = { getState: () => state };
 const version = document.getElementById('version');
 if (version) version.textContent = `v${__BUILD__}`;
 
-// First screen of a session is always the briefing, paused.
+// First screen of a session is always the briefing, paused. A brand-new
+// player gets the splash on top of it first.
 setSpeed(0);
 hud.showBriefing(sectorGrew(seasonIndex));
+if (seasonIndex === 0 && !bootResumed && !introSeen()) hud.showSplash();
 
 loop.start();

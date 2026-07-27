@@ -148,6 +148,10 @@ const en = {
   epitaph1: 'This forest is invented. The trend is not.',
   epitaph2: 'The decades you just defended are the ones we are living in.',
   staticDom: {
+    's-cmd': 'Valley Fire Command — Summer 2026',
+    's-welcome':
+      'Welcome, recruit — glad to have you on board. Things are getting tense this season.',
+    'btn-splash': 'Report for duty',
     'b-climate-head': 'The climate this season',
     'b-deg-label': 'global average, above pre-industrial',
     'b-drought-label': 'Once-a-decade drought',
@@ -305,6 +309,10 @@ const fr: Catalog = {
   epitaph1: 'Cette forêt est inventée. La tendance, non.',
   epitaph2: 'Les décennies que vous venez de défendre sont celles que nous vivons.',
   staticDom: {
+    's-cmd': 'PC Feux de la Vallée — Été 2026',
+    's-welcome':
+      'Bienvenue, recrue — heureux de vous compter parmi nous. La saison s’annonce tendue.',
+    'btn-splash': 'Prendre mon poste',
     'b-climate-head': 'Le climat cette saison',
     'b-deg-label': 'moyenne mondiale, au-dessus du préindustriel',
     'b-drought-label': 'Sécheresse décennale',
