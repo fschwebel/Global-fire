@@ -114,6 +114,7 @@ export class Hud {
   private bGrowth = el<HTMLParagraphElement>('b-growth');
   private bUnlock = el<HTMLParagraphElement>('b-unlock');
   private bFact = el<HTMLParagraphElement>('b-fact');
+  private bLinks = el<HTMLDivElement>('b-links');
   private debrief = el<HTMLDivElement>('debrief');
   private dTitle = el<HTMLHeadingElement>('d-title');
   private report = el<HTMLDivElement>('report');
@@ -448,6 +449,7 @@ export class Hud {
     this.bUnlock.hidden = !unlock;
     this.bUnlock.textContent = unlock ?? '';
     this.bFact.textContent = briefingFacts[s.seasonYear] ?? '';
+    this.bLinks.hidden = true; // the Learn-more links start collapsed each season
     this.briefing.hidden = false;
   }
 

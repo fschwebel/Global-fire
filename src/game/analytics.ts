@@ -75,3 +75,8 @@ export function trackUnitLost(unit: string, year: number): void {
 export function trackDrought(year: number): void {
   track('drought_event', { year });
 }
+
+/** The briefing's Learn-more links were expanded — play led to curiosity. */
+export function trackLearnMore(year: number): void {
+  track('learn_more_opened', { year });
+}

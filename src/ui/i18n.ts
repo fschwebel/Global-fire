@@ -176,6 +176,10 @@ const en = {
     'link-science-label': 'Understand the science',
     'link-un-label': 'The UN wildfire report',
     'link-home-label': 'Prepare your home',
+    'btn-learn': 'Learn more',
+    'blink-science-label': 'Understand the science',
+    'blink-un-label': 'The UN wildfire report',
+    'blink-home-label': 'Prepare your home',
     'btn-restart': 'Continue',
   } as Record<string, string>,
   staticTitles: {
@@ -183,6 +187,9 @@ const en = {
     'link-science': 'Opens ipcc.ch in a new tab',
     'link-un': 'Opens unep.org in a new tab',
     'link-home': 'Opens nfpa.org in a new tab',
+    'blink-science': 'Opens ipcc.ch in a new tab',
+    'blink-un': 'Opens unep.org in a new tab',
+    'blink-home': 'Opens nfpa.org in a new tab',
   } as Record<string, string>,
 };
 
@@ -337,6 +344,10 @@ const fr: Catalog = {
     'link-science-label': 'Comprendre la science',
     'link-un-label': 'Le rapport de l’ONU sur les incendies',
     'link-home-label': 'Protéger votre maison',
+    'btn-learn': 'En savoir plus',
+    'blink-science-label': 'Comprendre la science',
+    'blink-un-label': 'Le rapport de l’ONU sur les incendies',
+    'blink-home-label': 'Protéger votre maison',
     'btn-restart': 'Continuer',
   },
   staticTitles: {
@@ -344,6 +355,9 @@ const fr: Catalog = {
     'link-science': 'Ouvre ipcc.ch dans un nouvel onglet',
     'link-un': 'Ouvre unep.org dans un nouvel onglet',
     'link-home': 'Ouvre nfpa.org dans un nouvel onglet',
+    'blink-science': 'Ouvre ipcc.ch dans un nouvel onglet',
+    'blink-un': 'Ouvre unep.org dans un nouvel onglet',
+    'blink-home': 'Ouvre nfpa.org dans un nouvel onglet',
   },
 };
 

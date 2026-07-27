@@ -299,8 +299,7 @@ body {
   gap: 26px;
   text-align: center;
   padding: 24px;
-  background: radial-gradient(ellipse at 50% 118%, rgba(224, 96, 32, 0.3), transparent 62%),
-    #080a08;
+  background: radial-gradient(ellipse at 50% 118%, rgba(224, 96, 32, 0.3), transparent 62%), #080a08;
 }
 
 #splash[hidden] {
@@ -567,7 +566,8 @@ body {
   color: #9aa392;
 }
 
-#d-links {
+#d-links,
+#b-links {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -575,7 +575,28 @@ body {
   margin-top: -6px;
 }
 
-#d-links a {
+#b-links[hidden] {
+  display: none;
+}
+
+/* The briefing's quiet doorway to the same resources — secondary to Begin season. */
+#btn-learn {
+  background: none;
+  border: none;
+  color: #9aa392;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  margin-top: -6px;
+}
+
+#btn-learn:hover {
+  color: #cdd8c2;
+}
+
+#d-links a,
+#b-links a {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -588,17 +609,20 @@ body {
   text-align: left;
 }
 
-#d-links a .label {
+#d-links a .label,
+#b-links a .label {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-#d-links a .dest {
+#d-links a .dest,
+#b-links a .dest {
   font-size: 11px;
   color: #7f887b;
 }
 
-#d-links a:hover {
+#d-links a:hover,
+#b-links a:hover {
   border-color: #5d7a52;
 }
 

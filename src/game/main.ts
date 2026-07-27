@@ -10,6 +10,7 @@ import {
   trackCampaignFinished,
   trackCampaignRestarted,
   trackDrought,
+  trackLearnMore,
   trackSeasonCompleted,
   trackSeasonStarted,
   trackUnitLost,
@@ -400,6 +401,12 @@ function introSeen(): boolean {
   }
   hud.hideSplash();
   overlayClosedAt = performance.now(); // a double-tap must not fall through to Begin season
+});
+
+(document.getElementById('btn-learn') as HTMLButtonElement).addEventListener('click', () => {
+  const links = document.getElementById('b-links') as HTMLElement;
+  links.hidden = !links.hidden;
+  if (!links.hidden) trackLearnMore(state.seasonYear);
 });
 
 (document.getElementById('btn-begin') as HTMLButtonElement).addEventListener('click', () => {
