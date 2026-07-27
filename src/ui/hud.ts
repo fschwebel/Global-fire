@@ -114,7 +114,7 @@ export class Hud {
   private bGrowth = el<HTMLParagraphElement>('b-growth');
   private bUnlock = el<HTMLParagraphElement>('b-unlock');
   private bFact = el<HTMLParagraphElement>('b-fact');
-  private bLinks = el<HTMLDivElement>('b-links');
+  private about = el<HTMLDivElement>('about');
   private debrief = el<HTMLDivElement>('debrief');
   private dTitle = el<HTMLHeadingElement>('d-title');
   private report = el<HTMLDivElement>('report');
@@ -417,9 +417,23 @@ export class Hud {
     if (bar) bar.style.width = '0%';
   }
 
-  /** True while a full-screen overlay (splash, briefing or debrief) covers the game. */
+  /** True while a full-screen overlay (splash, briefing, debrief or About) covers the game. */
   overlayVisible(): boolean {
-    return !this.splash.hidden || !this.briefing.hidden || !this.debrief.hidden;
+    return (
+      !this.splash.hidden || !this.briefing.hidden || !this.debrief.hidden || !this.about.hidden
+    );
+  }
+
+  aboutVisible(): boolean {
+    return !this.about.hidden;
+  }
+
+  showAbout(): void {
+    this.about.hidden = false;
+  }
+
+  hideAbout(): void {
+    this.about.hidden = true;
   }
 
   /** First-contact splash for brand-new players; sits above the briefing. */
@@ -449,7 +463,6 @@ export class Hud {
     this.bUnlock.hidden = !unlock;
     this.bUnlock.textContent = unlock ?? '';
     this.bFact.textContent = briefingFacts[s.seasonYear] ?? '';
-    this.bLinks.hidden = true; // the Learn-more links start collapsed each season
     this.briefing.hidden = false;
   }
 

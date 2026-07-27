@@ -76,7 +76,7 @@ export function trackDrought(year: number): void {
   track('drought_event', { year });
 }
 
-/** The briefing's Learn-more links were expanded — play led to curiosity. */
-export function trackLearnMore(year: number): void {
-  track('learn_more_opened', { year });
+/** The About modal was opened — play led to curiosity. Source: 'hud' or 'debrief'. */
+export function trackAboutOpened(year: number, source: string): void {
+  track('about_opened', { year, source });
 }

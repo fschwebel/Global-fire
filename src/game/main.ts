@@ -7,10 +7,10 @@ import { Hud, type Tool } from '../ui/hud';
 import { L, applyStaticText } from '../ui/i18n';
 import { MapViewport } from '../ui/viewport';
 import {
+  trackAboutOpened,
   trackCampaignFinished,
   trackCampaignRestarted,
   trackDrought,
-  trackLearnMore,
   trackSeasonCompleted,
   trackSeasonStarted,
   trackUnitLost,
@@ -365,6 +365,10 @@ btnPause.addEventListener('click', () => setSpeed(0));
 btnPlay.addEventListener('click', () => setSpeed(1));
 
 document.addEventListener('keydown', (ev) => {
+  if (hud.aboutVisible() && ev.key === 'Escape') {
+    closeAbout();
+    return;
+  }
   if (hud.overlayVisible()) return; // never unpause behind the briefing/debrief
   if (ev.key === ' ') {
     ev.preventDefault();
@@ -403,10 +407,39 @@ function introSeen(): boolean {
   overlayClosedAt = performance.now(); // a double-tap must not fall through to Begin season
 });
 
-(document.getElementById('btn-learn') as HTMLButtonElement).addEventListener('click', () => {
-  const links = document.getElementById('b-links') as HTMLElement;
-  links.hidden = !links.hidden;
-  if (!links.hidden) trackLearnMore(state.seasonYear);
+// --- About modal: pause underneath, restore the previous speed on close -----
+
+let speedBeforeAbout = 0;
+
+function openAbout(source: string): void {
+  speedBeforeAbout = loop.speed;
+  setSpeed(0);
+  hud.showAbout();
+  trackAboutOpened(state.seasonYear, source);
+}
+
+function closeAbout(): void {
+  if (!hud.aboutVisible()) return;
+  hud.hideAbout();
+  overlayClosedAt = performance.now();
+  // Resume only when nothing else (briefing, debrief) still covers the game.
+  if (!hud.overlayVisible()) setSpeed(speedBeforeAbout);
+}
+
+(document.getElementById('btn-about') as HTMLButtonElement).addEventListener('click', () => {
+  if (!hud.overlayVisible()) openAbout('hud'); // never over another overlay
+});
+// The debrief's "Too hard?" opens the same modal above the (already paused) report.
+(document.getElementById('btn-toohard') as HTMLButtonElement).addEventListener('click', () => {
+  if (!hud.aboutVisible()) openAbout('debrief');
+});
+(document.getElementById('btn-about-close') as HTMLButtonElement).addEventListener(
+  'click',
+  closeAbout,
+);
+// A click on the dim backdrop (not the panel) also closes it.
+(document.getElementById('about') as HTMLElement).addEventListener('click', (ev) => {
+  if (ev.target === ev.currentTarget) closeAbout();
 });
 
 (document.getElementById('btn-begin') as HTMLButtonElement).addEventListener('click', () => {

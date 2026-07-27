@@ -176,10 +176,18 @@ const en = {
     'link-science-label': 'Understand the science',
     'link-un-label': 'The UN wildfire report',
     'link-home-label': 'Prepare your home',
-    'btn-learn': 'Learn more',
-    'blink-science-label': 'Understand the science',
-    'blink-un-label': 'The UN wildfire report',
-    'blink-home-label': 'Prepare your home',
+    'btn-about': 'About the game',
+    'a-title': 'About the game',
+    'a-p1':
+      'You are not meant to win. Each season follows the IPCC’s central warming projections, and each season the fire outgrows the means sent against it. That is not bad balance — it is the point.',
+    'a-p2':
+      'Real firefighting is the same: once a big fire is running, crews mostly choose what burns last. What works happens before the first spark — tended forests, firebreaks, early detection, and above all limiting the warming itself.',
+    'a-links-head': 'To go further, outside the game:',
+    'alink-science-label': 'Understand the science',
+    'alink-un-label': 'The UN wildfire report',
+    'alink-home-label': 'Prepare your home',
+    'btn-about-close': 'Close',
+    'btn-toohard': 'Too hard?',
     'btn-restart': 'Continue',
   } as Record<string, string>,
   staticTitles: {
@@ -187,9 +195,9 @@ const en = {
     'link-science': 'Opens ipcc.ch in a new tab',
     'link-un': 'Opens unep.org in a new tab',
     'link-home': 'Opens nfpa.org in a new tab',
-    'blink-science': 'Opens ipcc.ch in a new tab',
-    'blink-un': 'Opens unep.org in a new tab',
-    'blink-home': 'Opens nfpa.org in a new tab',
+    'alink-science': 'Opens ipcc.ch in a new tab',
+    'alink-un': 'Opens unep.org in a new tab',
+    'alink-home': 'Opens nfpa.org in a new tab',
   } as Record<string, string>,
 };
 
@@ -344,10 +352,18 @@ const fr: Catalog = {
     'link-science-label': 'Comprendre la science',
     'link-un-label': 'Le rapport de l’ONU sur les incendies',
     'link-home-label': 'Protéger votre maison',
-    'btn-learn': 'En savoir plus',
-    'blink-science-label': 'Comprendre la science',
-    'blink-un-label': 'Le rapport de l’ONU sur les incendies',
-    'blink-home-label': 'Protéger votre maison',
+    'btn-about': 'À propos du jeu',
+    'a-title': 'À propos du jeu',
+    'a-p1':
+      'Vous n’êtes pas censé gagner. Chaque saison suit les projections centrales de réchauffement du GIEC, et chaque saison le feu dépasse les moyens envoyés contre lui. Ce n’est pas un défaut d’équilibrage — c’est le propos.',
+    'a-p2':
+      'La lutte réelle est pareille : quand un grand feu court, les équipes choisissent surtout ce qui brûlera en dernier. Ce qui marche se joue avant la première étincelle — forêts entretenues, pare-feu, détection précoce, et surtout limiter le réchauffement lui-même.',
+    'a-links-head': 'Pour aller plus loin, hors du jeu :',
+    'alink-science-label': 'Comprendre la science',
+    'alink-un-label': 'Le rapport de l’ONU sur les incendies',
+    'alink-home-label': 'Protéger votre maison',
+    'btn-about-close': 'Fermer',
+    'btn-toohard': 'Trop dur ?',
     'btn-restart': 'Continuer',
   },
   staticTitles: {
@@ -355,9 +371,9 @@ const fr: Catalog = {
     'link-science': 'Ouvre ipcc.ch dans un nouvel onglet',
     'link-un': 'Ouvre unep.org dans un nouvel onglet',
     'link-home': 'Ouvre nfpa.org dans un nouvel onglet',
-    'blink-science': 'Ouvre ipcc.ch dans un nouvel onglet',
-    'blink-un': 'Ouvre unep.org dans un nouvel onglet',
-    'blink-home': 'Ouvre nfpa.org dans un nouvel onglet',
+    'alink-science': 'Ouvre ipcc.ch dans un nouvel onglet',
+    'alink-un': 'Ouvre unep.org dans un nouvel onglet',
+    'alink-home': 'Ouvre nfpa.org dans un nouvel onglet',
   },
 };
 

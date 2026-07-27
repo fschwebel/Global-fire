@@ -57,9 +57,41 @@
           <button id="btn-pause" type="button">⏸</button>
           <button id="btn-play" type="button" class="active">▶</button>
           <div id="seasonbar"><div id="seasonfill"></div></div>
+          <button id="btn-about" type="button">About the game</button>
         </div>
       </div>
       <div id="version"></div>
+      <div id="about" hidden>
+        <div id="about-panel">
+          <h2 id="a-title">About the game</h2>
+          <p id="a-p1">
+            You are not meant to win. Each season follows the IPCC's central warming
+            projections, and each season the fire outgrows the means sent against it.
+            That is not bad balance — it is the point.
+          </p>
+          <p id="a-p2">
+            Real firefighting is the same: once a big fire is running, crews mostly choose
+            what burns last. What works happens before the first spark — tended forests,
+            firebreaks, early detection, and above all limiting the warming itself.
+          </p>
+          <div id="a-links-head">To go further, outside the game:</div>
+          <div id="a-links">
+            <a id="alink-science" href="https://www.ipcc.ch/assessment-report/ar6/" target="_blank" rel="noopener" title="Opens ipcc.ch in a new tab">
+              <span class="label" id="alink-science-label">Understand the science</span>
+              <span class="dest">ipcc.ch ↗</span>
+            </a>
+            <a id="alink-un" href="https://www.unep.org/resources/report/spreading-wildfire-rising-threat-extraordinary-landscape-fires" target="_blank" rel="noopener" title="Opens unep.org in a new tab">
+              <span class="label" id="alink-un-label">The UN wildfire report</span>
+              <span class="dest">unep.org ↗</span>
+            </a>
+            <a id="alink-home" href="https://www.nfpa.org/education-and-research/wildfire/firewise-usa" target="_blank" rel="noopener" title="Opens nfpa.org in a new tab">
+              <span class="label" id="alink-home-label">Prepare your home</span>
+              <span class="dest">nfpa.org ↗</span>
+            </a>
+          </div>
+          <button id="btn-about-close" type="button">Close</button>
+        </div>
+      </div>
       <div id="splash" hidden>
         <div id="s-cmd">Valley Fire Command — Summer 2026</div>
         <h1 id="s-title">Global Fire</h1>
@@ -95,21 +127,6 @@
         <p id="b-unlock" hidden></p>
         <p id="b-fact"></p>
         <button id="btn-begin" type="button">Begin season</button>
-        <button id="btn-learn" type="button">Learn more</button>
-        <div id="b-links" hidden>
-          <a id="blink-science" href="https://www.ipcc.ch/assessment-report/ar6/" target="_blank" rel="noopener" title="Opens ipcc.ch in a new tab">
-            <span class="label" id="blink-science-label">Understand the science</span>
-            <span class="dest">ipcc.ch ↗</span>
-          </a>
-          <a id="blink-un" href="https://www.unep.org/resources/report/spreading-wildfire-rising-threat-extraordinary-landscape-fires" target="_blank" rel="noopener" title="Opens unep.org in a new tab">
-            <span class="label" id="blink-un-label">The UN wildfire report</span>
-            <span class="dest">unep.org ↗</span>
-          </a>
-          <a id="blink-home" href="https://www.nfpa.org/education-and-research/wildfire/firewise-usa" target="_blank" rel="noopener" title="Opens nfpa.org in a new tab">
-            <span class="label" id="blink-home-label">Prepare your home</span>
-            <span class="dest">nfpa.org ↗</span>
-          </a>
-        </div>
       </div>
       <div id="debrief" hidden>
         <h2 id="d-title">Season over — the rains arrive</h2>
@@ -151,6 +168,7 @@
         </div>
         <p id="d-campaign"></p>
         <button id="btn-restart" type="button">Continue</button>
+        <button id="btn-toohard" type="button">Too hard?</button>
       </div>
     </div>
     <script type="module" src="/src/game/main.ts"></script>

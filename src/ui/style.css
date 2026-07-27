@@ -567,7 +567,7 @@ body {
 }
 
 #d-links,
-#b-links {
+#a-links {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -575,28 +575,8 @@ body {
   margin-top: -6px;
 }
 
-#b-links[hidden] {
-  display: none;
-}
-
-/* The briefing's quiet doorway to the same resources — secondary to Begin season. */
-#btn-learn {
-  background: none;
-  border: none;
-  color: #9aa392;
-  font-size: 13px;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-  margin-top: -6px;
-}
-
-#btn-learn:hover {
-  color: #cdd8c2;
-}
-
 #d-links a,
-#b-links a {
+#a-links a {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -610,19 +590,108 @@ body {
 }
 
 #d-links a .label,
-#b-links a .label {
+#a-links a .label {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 #d-links a .dest,
-#b-links a .dest {
+#a-links a .dest {
   font-size: 11px;
   color: #7f887b;
 }
 
 #d-links a:hover,
-#b-links a:hover {
+#a-links a:hover {
+  border-color: #5d7a52;
+}
+
+/* Quiet doorways to the About modal: in the time controls, and on the debrief. */
+#btn-about,
+#btn-toohard {
+  background: none;
+  border: none;
+  color: #9aa392;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  min-height: 32px;
+}
+
+#btn-about:hover,
+#btn-toohard:hover {
+  color: #cdd8c2;
+}
+
+#btn-toohard {
+  margin-top: -8px;
+}
+
+/* The About modal: the game's thesis, said plainly, over a paused valley. */
+#about {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(8, 10, 8, 0.82);
+}
+
+#about[hidden] {
+  display: none;
+}
+
+#about-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(560px, 94vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid #3a4536;
+  background: #141a12;
+  padding: 22px 26px;
+  text-align: left;
+}
+
+#a-title {
+  font-size: 20px;
+  letter-spacing: 1px;
+}
+
+#a-p1,
+#a-p2 {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #cdd8c2;
+}
+
+#a-links-head {
+  font-size: 12px;
+  color: #9aa392;
+  margin-top: 4px;
+}
+
+#about #a-links {
+  justify-content: flex-start;
+  margin-top: 0;
+}
+
+#btn-about-close {
+  align-self: flex-end;
+  background: #222b20;
+  color: #e8e4da;
+  border: 1px solid #3a4536;
+  padding: 8px 22px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+#btn-about-close:hover {
   border-color: #5d7a52;
 }
 
