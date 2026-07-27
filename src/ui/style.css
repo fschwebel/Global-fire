@@ -606,8 +606,9 @@ body {
   border-color: #5d7a52;
 }
 
-/* Quiet doorways to the About modal: in the time controls, and on the debrief. */
-#btn-about,
+/* Quiet doorways to the About modal: in the time controls, and on the debrief.
+   The #timectl qualifier outranks the boxed `#timectl button` chrome. */
+#timectl #btn-about,
 #btn-toohard {
   background: none;
   border: none;
@@ -619,7 +620,7 @@ body {
   min-height: 32px;
 }
 
-#btn-about:hover,
+#timectl #btn-about:hover,
 #btn-toohard:hover {
   color: #cdd8c2;
 }
