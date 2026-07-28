@@ -80,3 +80,16 @@ export function trackDrought(year: number): void {
 export function trackAboutOpened(year: number, source: string): void {
   track('about_opened', { year, source });
 }
+
+/**
+ * An external resource link was followed — the game's real conversion.
+ * link: 'ipcc' | 'unep' | 'nfpa'; source: 'about' | 'finale'.
+ */
+export function trackResourceLink(link: string, source: string, year: number): void {
+  track('resource_link_click', { link, source, year });
+}
+
+/** A brand-new player pressed "Report for duty" on the splash. */
+export function trackSplashDismissed(): void {
+  track('splash_dismissed');
+}

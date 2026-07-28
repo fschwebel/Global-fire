@@ -11,8 +11,10 @@ import {
   trackCampaignFinished,
   trackCampaignRestarted,
   trackDrought,
+  trackResourceLink,
   trackSeasonCompleted,
   trackSeasonStarted,
+  trackSplashDismissed,
   trackUnitLost,
 } from './analytics';
 import { simulateUnfoughtCampaign } from './counterfactual';
@@ -403,9 +405,25 @@ function introSeen(): boolean {
   } catch {
     // best effort — the splash simply shows again next visit
   }
+  trackSplashDismissed();
   hud.hideSplash();
   overlayClosedAt = performance.now(); // a double-tap must not fall through to Begin season
 });
+
+// Following a real-world resource link is the awareness game's conversion —
+// tracked from both doorways (About modal and the 2070 finale).
+const RESOURCE_LINKS: [string, string, string][] = [
+  ['alink-science', 'ipcc', 'about'],
+  ['alink-un', 'unep', 'about'],
+  ['alink-home', 'nfpa', 'about'],
+  ['link-science', 'ipcc', 'finale'],
+  ['link-un', 'unep', 'finale'],
+  ['link-home', 'nfpa', 'finale'],
+];
+for (const [id, link, source] of RESOURCE_LINKS)
+  document
+    .getElementById(id)
+    ?.addEventListener('click', () => trackResourceLink(link, source, state.seasonYear));
 
 // --- About modal: pause underneath, restore the previous speed on close -----
 
