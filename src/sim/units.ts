@@ -632,8 +632,20 @@ function dangerSweep(
       u.fatigue = Math.max(0, u.fatigue - D.fatigueDecay);
       continue;
     }
-    u.dangerTicks += 1;
-    u.fatigue += 1;
+    // Engines are machines full of fuel beside a fire: their grace erodes
+    // faster than a crew's, and faster still with flames under the wheels.
+    const rate =
+      kind === 'engine'
+        ? cellAt(s, u.x, u.y).state === 'burning'
+          ? D.engineBurningRate
+          : D.engineAdjacentRate
+        : 1;
+    const before = u.dangerTicks;
+    u.dangerTicks += rate;
+    // Fatigue accrues at the same rate: a battered engine exhausts (and loses
+    // grace, and escape reach) proportionally sooner — vulnerability that
+    // still counts when tick rounding would hide the faster danger clock.
+    u.fatigue += rate;
     // Exhaustion and a dry tank erode the margin: less warning, and weary
     // legs cannot reach as far — smaller pockets become lethal.
     const weary = tankEmpty || u.fatigue >= D.fatigueGraceEvery;
@@ -643,7 +655,8 @@ function dangerSweep(
         (tankEmpty ? D.dryTankGracePenalty : 0) -
         Math.floor(u.fatigue / D.fatigueGraceEvery),
     );
-    if (u.dangerTicks === grace) events.push({ type: 'crewDanger', unit: kind, unitId: u.id });
+    if (before < grace && u.dangerTicks >= grace)
+      events.push({ type: 'crewDanger', unit: kind, unitId: u.id });
     if (u.dangerTicks >= grace && trapped(s, u, weary ? D.wearyEscapeRadius : D.escapeRadius)) {
       lost.push(u.id);
       s.stats.firefightersLost += crewSize;

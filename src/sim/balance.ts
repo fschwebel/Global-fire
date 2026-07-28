@@ -184,6 +184,11 @@ export const danger = {
   intensityThreshold: 5,
   /** Consecutive danger ticks before the warning goes out (and death becomes possible). */
   graceTicks: 3,
+  /** Engines burn through their grace faster than crews accrue it: danger beside
+   *  heavy fire counts 1.3× per tick, and standing in flames 1.7× — an engine in
+   *  the fire itself has ~40% less margin than one merely flanked. */
+  engineAdjacentRate: 1.3,
+  engineBurningRate: 1.7,
   /** How far the escape search looks for a safe tile (Chebyshev). */
   escapeRadius: 12,
   /** A dry-tank or exhausted crew cannot run as far — smaller pockets trap them. */
