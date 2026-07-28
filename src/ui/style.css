@@ -41,7 +41,13 @@ body {
   font-variant-numeric: tabular-nums;
   font-size: 15px;
   display: flex;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+}
+
+/* A counter never breaks inside itself — the row wraps between counters. */
+#stats span {
+  white-space: nowrap;
 }
 
 #weather {
@@ -296,6 +302,8 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  justify-content: safe center;
+  overflow-y: auto;
   gap: 26px;
   text-align: center;
   padding: 24px;
@@ -352,10 +360,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* `safe` keeps the top reachable when content is taller than the screen. */
   justify-content: center;
+  justify-content: safe center;
   gap: 16px;
   text-align: center;
   padding: 24px;
+  overflow-y: auto;
 }
 
 #briefing[hidden],
@@ -378,7 +389,7 @@ body {
 
 /* The AR6 climate block — the briefing's main message, scannable at a glance. */
 #b-climate {
-  width: min(480px, 92vw);
+  width: min(480px, 100%);
   border: 1px solid #3a4536;
   background: rgba(24, 30, 22, 0.85);
   padding: 12px 18px 10px;
@@ -464,7 +475,7 @@ body {
 
 /* The source tag sits tight under the card frame, unmistakably an attribution. */
 #b-climate-src {
-  width: min(480px, 92vw);
+  width: min(480px, 100%);
   margin-top: -12px;
   text-align: right;
   font-size: 11px;
@@ -636,9 +647,11 @@ body {
   z-index: 15;
   display: flex;
   align-items: center;
+  align-items: safe center;
   justify-content: center;
-  padding: 24px;
+  padding: 16px;
   background: rgba(8, 10, 8, 0.82);
+  overflow-y: auto;
 }
 
 #about[hidden] {
@@ -649,7 +662,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  width: min(560px, 94vw);
+  width: min(560px, 100%);
   max-height: 90vh;
   overflow-y: auto;
   border: 1px solid #3a4536;
@@ -747,10 +760,32 @@ body {
 
   #stats {
     font-size: 13px;
+    gap: 2px 10px;
   }
 
   #weather {
     font-size: 12px;
+  }
+
+  /* Overlays: tighter margins so cards and panels never leave the screen. */
+  #briefing,
+  #debrief,
+  #about {
+    padding: 12px;
+  }
+
+  #b-year {
+    font-size: 32px;
+  }
+
+  #about-panel {
+    padding: 16px 16px;
+  }
+
+  #d-compare th,
+  #d-compare td {
+    padding-left: 8px;
+    padding-right: 8px;
   }
 
   #main {
@@ -765,12 +800,14 @@ body {
   #sidebar {
     width: 100%;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: stretch;
     gap: 6px;
   }
 
   #palette {
     display: flex;
+    flex: none;
     gap: 4px;
   }
 
@@ -780,14 +817,20 @@ body {
     min-height: 44px;
   }
 
+  /* The unit roster grows to five cards by 2055 — it scrolls sideways rather
+     than clipping the bombers and crew off the edge. */
   #engines {
     flex-direction: row;
-    flex: 1;
+    flex-basis: 100%;
     gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
   }
 
   .engine-card {
-    flex: 1;
+    flex: none;
+    min-width: 96px;
     padding: 4px 6px;
     font-size: 11px;
   }
