@@ -1,6 +1,14 @@
 # Gameplay Systems
 
-> **Canon note** (binding, from [`../PLAN.md`](../PLAN.md) §2): campaign of **ten seasons — 2026, 2030, then every five years to 2070** (`t = seasonIndex`, 0–9); 4–5 real years pass between consecutive seasons · one persistent 60×40 world, 1 tile = 1 ha, played as a centered sector the department widens every two seasons (44×30 → 60×40) · 800 ms fixed ticks, square grid, Moore-8, double-buffered, seeded PRNG · no game-over/stars/grades; internal Stewardship Score only · deterministic firefighter deaths · warning-time evacuation mortality · unlock-season tools granted free · every number below is a **v0 value to playtest**, living in `balance.ts` — tuning never touches sim code.
+> **Canon note** (binding, from [`../PLAN.md`](../PLAN.md) §2): campaign of **ten seasons — 2026, 2030, then every five years to 2070** (`t = seasonIndex`, 0–9); 4–5 real years pass between consecutive seasons · one persistent 60×40 world, 1 tile = 1 ha, played as a centered sector the department widens every two seasons (44×30 → 60×40) · 800 ms fixed ticks, square grid, Moore-8, double-buffered, seeded PRNG · no game-over/stars/grades · deterministic firefighter deaths · unlock-season tools granted free · every number below is a **v0 value to playtest**, living in `balance.ts` — tuning never touches sim code.
+
+> **Reality check (July 2026, shipped game):** the budget/prep phase, Stewardship Score,
+> ember spotting (§2.5), auto-pause camera beats, and warning-time evacuation mortality
+> were **not built** (mortality is tiered 30/10/0% by evacuation state; spotting is
+> post-1.0 backlog). The danger rule replaced auto-retreat: warned units must be pulled
+> out by the player and die only when genuinely trapped. Timing arithmetic below that
+> assumes 2 Hz ticks is stale — the sim runs at 800 ms/tick; `src/sim/balance.ts` is the
+> only authoritative source for numbers.
 
 ---
 

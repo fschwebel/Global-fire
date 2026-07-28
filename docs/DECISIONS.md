@@ -15,3 +15,12 @@ Questions the plan deliberately leaves open, with the current recommendation whe
 | 9 | **Sensitivity reader** | One outside read of memorial/civilian-loss content before release | Yes — budget half a day at M4 | M4 |
 | 10 | **Analytics** | Zero at 1.0 per plan. Revisit only if an awareness campaign partner needs reach numbers | Keep zero | Post-1.0 |
 | 11 | **Press/awareness kit contents** | 3 screenshots, 1 GIF, 100-word blurb, teacher one-pager? | Include the teacher one-pager — classrooms are the highest-leverage audience | M5 |
+
+## Decided (July 2026)
+
+| # | Decision | Outcome |
+|---|---|---|
+| 8 | **Second locale (FR)** | **Shipped.** Full French translation, auto-selected from the browser's language; strings live in a typed en/fr catalog (`src/ui/i18n.ts`, `src/ui/facts.ts`) where a missing translation is a compile error. |
+| 10 | **Analytics** | **Reversed by owner request.** GA4 (gtag.js, direct — the interim GTM container was retired) with pageviews plus progression events (`src/game/analytics.ts`): season funnel, campaign completion, unit losses, drought events, About-modal opens. |
+| — | **Late-game difficulty** | **Canon: the late game is unwinnable by design** — the game's thesis, stated in-game (About modal, finale) and in the README ("Losing is the point"). Balance work may tune *how* it is lost, never whether. |
+| — | **Renderer** | Plain Canvas 2D, zero runtime dependencies (PixiJS and Howler/audio cut — see tech-stack.md reality check). |

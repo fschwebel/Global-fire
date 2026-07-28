@@ -1,6 +1,11 @@
 # Campaign Progression & Climate Model
 
 > **Canon note** (binding, from [`../PLAN.md`](../PLAN.md) §2): campaign of **ten seasons — 2026, 2030, then every five years to 2070** · one persistent map; 4–5 real years pass between consecutive seasons · metric reveals: hectares 2026, animals 2030, houses 2035, firefighters 2045 (at zero), population 2050 · unlocks: trucks 2026, water bomber 2030, evac 2035 (after homes join the counter), towers 2040, crews/burns 2050 (each granted free in its season) · no game-over; two endings + do-nothing comparison · all sim constants live in `balance.ts` — this document defines *when* values apply and *why*, never redefines formulas (those live in [`gameplay.md`](gameplay.md)).
+> **Reality check (July 2026, shipped game):** see the divergence list at the top of
+> [`../PLAN.md`](../PLAN.md). Notably: there is one ending (the 2070 finale with the
+> do-nothing comparison — no early "Line Broke" ending), reveals are year-based, and the
+> crisis spine is the extreme-drought event rather than named spike seasons. Where this document and the code
+> disagree, the code and the root `README.md` win.
 
 ---
 
