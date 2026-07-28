@@ -1,6 +1,7 @@
 # UI/UX & Emotional Design
 
 > **Canon note** (binding, from [`../PLAN.md`](../PLAN.md) §2): campaign of ten seasons — 2026, 2030, then every five years to 2070; 4–5 real years pass between seasons · metric reveals: hectares 2026, animals 2030, houses 2035, firefighters 2045 (at zero), population 2050 · no stars, grades, or score displays anywhere · two endings ("The Long Defense", "The Year the Line Broke") + do-nothing comparison · audio budget: one global ambience crossfade + scar-tile mute (per tech-stack scope) · UI says **"water bomber"**, never "Canadair".
+
 > **Reality check (July 2026, shipped game):** see the divergence list at the top of
 > [`../PLAN.md`](../PLAN.md). Notably: no audio shipped at all, there is a single ending
 > ("The Long Defense" finale), no auto-pause camera beats, and the game added a splash
