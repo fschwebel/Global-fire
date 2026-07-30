@@ -5,7 +5,7 @@
 > **Reality check (July 2026, shipped game):** the renderer is **plain Canvas 2D with
 > zero runtime dependencies** — PixiJS was never needed at this scale, and Howler/audio
 > was cut entirely. Strings (including the sourced facts) live in `src/ui/i18n.ts` and
-> `src/ui/facts.ts` as typed en/fr catalogs rather than `facts.json`. "Zero analytics"
+> `src/ui/facts.ts` as typed en/fr/es catalogs rather than `facts.json`. "Zero analytics"
 > was superseded at the owner's request: the site loads GA4 (gtag.js) for pageviews and
 > a small set of progression events wired in `src/game/analytics.ts`. The architecture
 > section's deterministic sim/command/event contract shipped as specified.

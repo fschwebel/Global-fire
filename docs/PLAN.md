@@ -21,7 +21,7 @@
 > - **Pause/play only** — the 2× speed was cut. First fire lands ~8 s in, detection delay
 >   is 8 s (10 ticks at 800 ms).
 > - **Stack:** plain Canvas 2D with zero runtime dependencies — no PixiJS, no Howler, no
->   audio at all. Facts live in `src/ui/facts.ts` (en/fr), not `facts.json`. GA4 analytics
+>   audio at all. Facts live in `src/ui/facts.ts` (en/fr/es), not `facts.json`. GA4 analytics
 >   were added at the owner's request in 2026 (pageviews + progression events).
 > - **Development is boom-and-retreat:** housing grows to ×1.5 by 2060, then managed
 >   retreat to ×0.75 by 2070 — the WUI is not "complete by 2050".

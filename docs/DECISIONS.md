@@ -20,7 +20,7 @@ Questions the plan deliberately leaves open, with the current recommendation whe
 
 | # | Decision | Outcome |
 |---|---|---|
-| 8 | **Second locale (FR)** | **Shipped.** Full French translation, auto-selected from the browser's language; strings live in a typed en/fr catalog (`src/ui/i18n.ts`, `src/ui/facts.ts`) where a missing translation is a compile error. |
+| 8 | **Second locale (FR, then ES)** | **Shipped.** Full French and Spanish translations, auto-selected from the browser's language; strings live in a typed en/fr/es catalog (`src/ui/i18n.ts`, `src/ui/facts.ts`) where a missing translation is a compile error. Spanish reviewed by an independent localization pass (entrapment terminology, weather-vs-climate accuracy in the sourced facts). |
 | 10 | **Analytics** | **Reversed by owner request.** GA4 (gtag.js, direct — the interim GTM container was retired) with pageviews plus progression events (`src/game/analytics.ts`): season funnel, campaign completion, unit losses, drought events, About-modal opens. |
 | — | **Late-game difficulty** | **Canon: the late game is unwinnable by design** — the game's thesis, stated in-game (About modal, finale) and in the README ("Losing is the point"). Balance work may tune *how* it is lost, never whether. |
 | — | **Renderer** | Plain Canvas 2D, zero runtime dependencies (PixiJS and Howler/audio cut — see tech-stack.md reality check). |

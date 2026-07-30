@@ -2,15 +2,16 @@
  * Internationalization: every user-facing string, per locale.
  *
  * The locale is picked once at boot from the browser's language preferences —
- * French when any preferred language is `fr*`, English otherwise. Catalog
- * entries are plain strings or functions of their parameters; `fr` is typed
- * against `en` so a missing translation is a compile error.
+ * the first preference matching French, Spanish or English wins; anything else
+ * falls back to English. Catalog entries are plain strings or functions of
+ * their parameters; `fr` and `es` are typed against `en` so a missing
+ * translation is a compile error.
  *
  * French strings use U+00A0 (no-break space) before tall punctuation and
- * units, per French typography.
+ * units, per French typography. Spanish uses inverted marks where due.
  */
 
-export type Locale = 'en' | 'fr';
+export type Locale = 'en' | 'fr' | 'es';
 
 function detectLocale(): Locale {
   if (typeof navigator === 'undefined') return 'en';
@@ -18,6 +19,7 @@ function detectLocale(): Locale {
   for (const lang of prefs) {
     const lower = (lang ?? '').toLowerCase();
     if (lower.startsWith('fr')) return 'fr';
+    if (lower.startsWith('es')) return 'es';
     if (lower.startsWith('en')) return 'en';
   }
   return 'en';
@@ -25,8 +27,8 @@ function detectLocale(): Locale {
 
 export const locale: Locale = detectLocale();
 
-/** BCP-47 tag for number formatting (decimal comma in French). */
-export const numberLocale = locale === 'fr' ? 'fr-FR' : 'en-US';
+/** BCP-47 tag for number formatting (decimal comma in French and Spanish). */
+export const numberLocale = locale === 'fr' ? 'fr-FR' : locale === 'es' ? 'es-ES' : 'en-US';
 
 /** Locale-aware number rendering: 1.3 → "1.3" / "1,3"; 12800 → "12,800" / "12 800". */
 export function fmt(n: number): string {
@@ -377,8 +379,182 @@ const fr: Catalog = {
   },
 };
 
+const es: Catalog = {
+  // --- Tarjetas de unidades ------------------------------------------------------
+  cardEngine: (id: number) => `Camión ${id}`,
+  cardBomber: (id: number) => `Avión ${id}`,
+  cardCrew: (id: number) => `Cuadrilla ${id}`,
+  statusDanger: '¡EN PELIGRO — retirada!',
+  statusEnRoute: 'En camino',
+  statusFighting: 'Combatiendo el fuego',
+  statusRefilling: 'Recargando agua',
+  statusStandingBy: 'En espera',
+  statusCutting: 'Cortando',
+  bomberReady: 'Listo',
+  bomberOutbound: 'En aproximación',
+  bomberDropping: 'Descargando',
+  bomberReturning: 'Regresando',
+  bomberReloading: 'Recargando',
+  statusGroundedDrought: 'En tierra — sequía',
+  exhaustedSuffix: ' · agotados',
+  cutsQueued: (n: number) => ` · ${n} cortes en cola`,
+  lostFirefighters: (n: number) => `${n} bomberos perdidos`,
+
+  // --- Barra superior --------------------------------------------------------------
+  haBurnt: (n: number) => `${fmt(n)} ha quemadas`,
+  animalsTop: (n: number) => `~${fmt(n)} animales`,
+  homesLostTop: (n: number) => `${fmt(n)} casas perdidas`,
+  firefightersTop: (n: number) => `${fmt(n)} bomberos`,
+  peopleTop: (n: number) => `${fmt(n)} habitantes`,
+  dryness: (pct: number) => `sequedad ${pct} %`,
+  windKmh: (n: number) => `${n} km/h`,
+
+  // --- Línea de balance de campaña ----------------------------------------------------
+  haShort: (n: number) => `${fmt(n)} ha`,
+  animalsShort: (n: number) => `~${fmt(n)} animales`,
+  homesShort: (n: number) => `${fmt(n)} casas`,
+  firefightersShort: (n: number) => `${fmt(n)} bomberos`,
+  peopleShort: (n: number) => `${fmt(n)} habitantes`,
+
+  // --- Línea de ayuda de selección ------------------------------------------------------
+  selEngine:
+    'Haz clic en el mapa — responde el camión más cercano. Haz clic en la tarjeta de un camión para tomar el control directo.',
+  selEvac:
+    'Evacuación: haz clic en un pueblo para ordenar su salida. Evacuar lleva tiempo — da la orden pronto.',
+  selBomber: 'Avión cisterna: haz clic donde debe comenzar la línea de retardante.',
+  selTower:
+    'Torre de vigilancia: haz clic en el mapa para levantarla. Avisa casi al instante de los fuegos cercanos.',
+  selCrew:
+    'Cuadrilla forestal: haz clic en casillas de vegetación para abrir un cortafuegos. Esc para terminar.',
+  selControlling: (id: number) =>
+    `Controlando el Camión ${id} — haz clic en el mapa para enviarlo. Esc para soltarlo.`,
+  selBomberAim:
+    'Ahora haz clic en una segunda casilla — la línea irá del ancla hacia ella. Esc para cancelar.',
+
+  // --- Descripciones de las medidas ------------------------------------------------------
+  ttEngine: 'Enviar un camión — haz clic en el mapa y responde el más cercano',
+  ttEvac: 'Orden de evacuación — haz clic en un pueblo para sacar a su gente',
+  ttBomber: 'Avión cisterna — haz clic en el mapa para pedir una descarga',
+  ttTower: 'Torre de vigilancia — colócala para detectar los fuegos pronto',
+  ttCrew: 'Cuadrilla forestal — haz clic en la vegetación para abrir un cortafuegos',
+  ttUnlocks: (year: number) => `Disponible en ${year}`,
+  ttEvacBusy: 'Los servicios de emergencia están en plena evacuación — un pueblo a la vez',
+  ttEvacRegroup: 'Los servicios de emergencia se están reagrupando',
+  ttBomberGrounded: 'En tierra — la sequía no dejó agua que descargar',
+  ttTowersDone: 'Todas las torres colocadas',
+  ttCrewGone: 'La cuadrilla se perdió esta temporada',
+
+  // --- Alertas ---------------------------------------------------------------------------
+  alertResidents: (n: number) =>
+    n === 1 ? '1 habitante no pudo escapar.' : `${n} habitantes no pudieron escapar.`,
+  alertFire: (ref: string) => `Fuego avistado — zona ${ref}`,
+  alertEvacStarted: 'Evacuación ordenada — el pueblo se pone en marcha.',
+  alertEvacComplete: 'Pueblo evacuado — no queda nadie.',
+  alertDrop: 'Descarga sobre el objetivo.',
+  alertTower: 'Torre de vigilancia levantada.',
+  alertDangerEngine: (id: number) => `¡El Camión ${id} pide retirada — sácalos de ahí!`,
+  alertDangerCrew: '¡La cuadrilla pide retirada — sácalos de ahí!',
+  alertMaydayEngine: (id: number, n: number) =>
+    `MAYDAY — Camión ${id} atrapado por el fuego. ${n} bomberos perdidos.`,
+  alertMaydayCrew: (n: number) =>
+    `MAYDAY — la cuadrilla quedó atrapada por el fuego. ${n} bomberos perdidos.`,
+  alertWindShift: 'Cambio de viento — los frentes girarán.',
+  alertRain: 'La lluvia cruza el valle.',
+  alertRiverDry:
+    'Sequía extrema — el río se ha secado. Sin recargas, los aviones en tierra, y el fuego puede cruzar el cauce.',
+  alertWinddown: 'Todos los fuegos están apagados — la temporada llega a su fin.',
+
+  // --- Avisos del lado del cliente -----------------------------------------------------------
+  nfEvacBusy: 'Los servicios de emergencia están en plena evacuación — un pueblo a la vez.',
+  nfEvacRegroup: 'Los servicios de emergencia se reagrupan — la próxima orden debe esperar.',
+  nfBomberGrounded: 'La sequía dejó los aviones en tierra — no hay agua que descargar.',
+  nfNoBomberReady: 'Ningún avión listo — recargando más allá del valle.',
+  nfNoTowers: 'No quedan torres por colocar.',
+  nfBadTowerGround: 'Ese terreno no admite una torre.',
+  nfCrewGone: 'La cuadrilla se perdió esta temporada.',
+
+  // --- Sesión informativa ---------------------------------------------------------------------
+  degNum: (avg: number) => `≈ +${fmt(avg)} °C`,
+  returnEvery: (yrs: number) => `ahora cada ~${fmt(yrs)} años`,
+  peakPlus: (deg: number) => `≈ +${fmt(deg)} °C`,
+  climateTooltip:
+    'Estimación central respecto al preindustrial para una trayectoria de emisiones intermedia (IPCC AR6, ≈SSP2-4.5). Los períodos de retorno interpolan los aumentos de frecuencia del resumen del AR6 para sequías decenales (regiones en desecación) y episodios de calor sobre tierra. Los extremos cálidos suben entre 1,5 y 2 veces más rápido que la media global — la estimación de los días más cálidos usa el extremo inferior de ese rango.',
+
+  // --- Balance / final -------------------------------------------------------------------------
+  debriefFinalTitle: 'La Larga Defensa — 2070',
+  debriefSeasonTitle: 'Fin de temporada — llegan las lluvias',
+  btnNewCampaign: 'Empezar una nueva campaña',
+  btnContinue: 'Continuar',
+  campaignSoFar: (line: string) => `Campaña hasta ahora: ${line}`,
+  reportHa: (n: number) => `${fmt(n)} hectáreas quemadas`,
+  reportAnimals: (n: number) => `~${fmt(n)} animales muertos`,
+  reportHomes: (n: number) => `${fmt(n)} casas perdidas`,
+  reportFirefighters: (n: number) => `${fmt(n)} bomberos perdidos`,
+  reportPeople: (n: number) => `${fmt(n)} habitantes perdidos`,
+  savedLine: (ha: number, homes: number, lives: number) =>
+    `Tu defensa salvó ≈ ${fmt(ha)} hectáreas, ${fmt(homes)} casas y ${fmt(lives)} vidas.`,
+  costLine: (n: number) =>
+    `Costó ${n} bomberos. Sostuvieron líneas que no podían sostenerse todas.`,
+
+  // --- Texto estático de la página --------------------------------------------------------------
+  epitaph1: 'Este bosque es inventado. La tendencia, no.',
+  epitaph2: 'Las décadas que acabas de defender son las que estamos viviendo.',
+  staticDom: {
+    's-cmd': 'Mando de Incendios del Valle — Verano 2026',
+    's-welcome':
+      'Te damos la bienvenida, recluta — nos alegra tenerte a bordo. La temporada se anuncia tensa.',
+    'btn-splash': 'Presentarse al servicio',
+    'b-climate-head': 'El clima esta temporada',
+    'b-deg-label': 'media global, sobre el nivel preindustrial',
+    'b-drought-label': 'Sequía decenal',
+    'b-heat-label': 'Ola de calor decenal',
+    'b-peak-label': 'Los días de verano más cálidos aquí',
+    'b-climate-note':
+      'Una media global subestima una temporada de incendios — las zonas terrestres se calientan más rápido, y los extremos aún más.',
+    'b-climate-src':
+      'Fuente: IPCC, Sexto Informe de Evaluación (AR6) — estimaciones centrales, trayectoria intermedia (≈SSP2-4.5)',
+    'b-growth':
+      'El departamento ha ampliado tu sector — más bosque, más gente, y te toca protegerlos.',
+    'btn-begin': 'Comenzar la temporada',
+    'd-title': 'Fin de temporada — llegan las lluvias',
+    'd-verdict': 'Nunca detuviste el fuego. Decidiste qué le sobreviviría.',
+    'c-head-you': 'Tus 44 años',
+    'c-head-not': 'Sin intervención',
+    'c-row-ha': 'Bosque quemado',
+    'c-row-an': 'Animales muertos',
+    'c-row-ho': 'Casas perdidas',
+    'c-row-pe': 'Habitantes perdidos',
+    'd-links-head': 'Para profundizar — informes y recursos reales, fuera del juego:',
+    'link-science-label': 'Entender la ciencia',
+    'link-un-label': 'El informe de la ONU sobre incendios',
+    'link-home-label': 'Proteger tu casa',
+    'btn-about': 'Acerca del juego',
+    'a-title': 'Acerca del juego',
+    'a-p1':
+      'No se supone que ganes. Cada temporada sigue las proyecciones centrales de calentamiento del IPCC, y cada temporada el fuego supera los medios enviados contra él. No es un fallo de equilibrio — es el propósito.',
+    'a-p2':
+      'La lucha real es igual: cuando un gran incendio corre, las cuadrillas sobre todo eligen qué será lo último en arder. Lo que funciona ocurre antes de la primera chispa — bosques cuidados, cortafuegos, detección temprana y, sobre todo, limitar el propio calentamiento.',
+    'a-links-head': 'Para ir más lejos, fuera del juego:',
+    'alink-science-label': 'Entender la ciencia',
+    'alink-un-label': 'El informe de la ONU sobre incendios',
+    'alink-home-label': 'Proteger tu casa',
+    'btn-about-close': 'Cerrar',
+    'btn-toohard': '¿Demasiado difícil?',
+    'btn-restart': 'Continuar',
+  },
+  staticTitles: {
+    'tool-engine': 'Enviar un camión — haz clic en el mapa y responde el más cercano',
+    'link-science': 'Abre ipcc.ch en una pestaña nueva',
+    'link-un': 'Abre unep.org en una pestaña nueva',
+    'link-home': 'Abre nfpa.org en una pestaña nueva',
+    'alink-science': 'Abre ipcc.ch en una pestaña nueva',
+    'alink-un': 'Abre unep.org en una pestaña nueva',
+    'alink-home': 'Abre nfpa.org en una pestaña nueva',
+  },
+};
+
 /** The active string catalog. */
-export const L: Catalog = locale === 'fr' ? fr : en;
+export const L: Catalog = locale === 'fr' ? fr : locale === 'es' ? es : en;
 
 /**
  * Overwrite index.html's static English text with the active catalog — applied

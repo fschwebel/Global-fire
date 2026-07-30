@@ -31,8 +31,24 @@ const briefingFactsFr: Record<number, string> = {
   2070: 'Le Black Summer australien a déclenché des dizaines d’orages générés par les feux — des incendies si vastes qu’ils fabriquaient leur propre météo.',
 };
 
-export const briefingFacts: Record<number, string> =
-  locale === 'fr' ? briefingFactsFr : briefingFactsEn;
+const briefingFactsEs: Record<number, string> = {
+  2026: 'La temporada mundial de condiciones meteorológicas propicias al fuego se alargó ~19 % entre 1979 y 2013. — Jolly et al., Nature Communications, 2015',
+  2030: 'La ONU proyecta un aumento de los incendios extremos de hasta el 14 % para 2030. — PNUMA, Spreading like Wildfire, 2022',
+  2035: 'En 2022, una Europa castigada por la sequía sufrió su segunda peor temporada de incendios registrada: ~837 000 hectáreas quemadas en la UE. — EFFIS/JRC',
+  2040: 'La superficie quemada media anual en EE. UU. se duplicó aproximadamente entre los años noventa y la década de 2010. — NIFC',
+  2045: 'Durante el domo de calor del Pacífico Noroeste de 2021, Lytton (Columbia Británica) alcanzó 49,6 °C — y ardió por completo al día siguiente.',
+  2050: 'La ONU proyecta un aumento de los incendios extremos de hasta el 30 % para 2050, incluso con fuertes recortes de emisiones. — PNUMA, 2022',
+  2055: 'La temporada récord de Canadá en 2023 quemó más de 15 millones de hectáreas — más del doble del récord anterior — y empezó inusualmente pronto, en mayo.',
+  2060: 'Tras un fuego de alta severidad en un clima más cálido, algunos bosques ya no se regeneran y se convierten para siempre en matorral.',
+  2065: 'El Camp Fire de 2018 destruyó ~18 800 edificaciones y mató a 85 personas en Paradise, California.',
+  2070: 'El Black Summer australiano generó decenas de tormentas provocadas por el fuego — incendios tan vastos que generaban su propia meteorología.',
+};
+
+export const briefingFacts: Record<number, string> = {
+  en: briefingFactsEn,
+  fr: briefingFactsFr,
+  es: briefingFactsEs,
+}[locale];
 
 /** "New this season" briefing line — each means arrives free, reassigned to the sector. */
 const unlockNotesEn: Record<number, string> = {
@@ -57,7 +73,22 @@ const unlockNotesFr: Record<number, string> = {
   2070: 'Une cinquième tour de guet arrive, pour ce qu’elle peut encore voir.',
 };
 
-export const unlockNotes: Record<number, string> = locale === 'fr' ? unlockNotesFr : unlockNotesEn;
+const unlockNotesEs: Record<number, string> = {
+  2030: 'Nuevo esta temporada: un avión cisterna que llega de más allá del valle. Arma 🛩, haz clic donde empieza la línea de retardante y luego en una segunda casilla para orientarla.',
+  2035: 'Nuevo esta temporada: las órdenes de evacuación. Arma 📢 y haz clic en un pueblo — los servicios mueven un pueblo a la vez, elige quién sale primero.',
+  2040: 'Nuevo esta temporada: dos torres de vigilancia. Arma 🗼 y colócalas donde nadie daría el aviso — una torre detecta el humo casi al instante.',
+  2045: 'Desde esta temporada el fuego puede atrapar a una unidad: si un vehículo queda rodeado sin salida, lo pierdes. Cuando la radio pida retirada, actúa.',
+  2050: 'Nuevo esta temporada: una cuadrilla forestal (arma ⛏ y haz clic en la vegetación para abrir un cortafuegos; cualquier casilla despejada la pone a salvo) — y una tercera torre de vigilancia.',
+  2055: 'Nuevo esta temporada: un segundo avión cisterna se une al sector.',
+  2060: 'Llega una cuarta torre de vigilancia — el sector ha crecido y tus ojos deben crecer con él.',
+  2070: 'Llega una quinta torre de vigilancia, para lo que aún pueda ver.',
+};
+
+export const unlockNotes: Record<number, string> = {
+  en: unlockNotesEn,
+  fr: unlockNotesFr,
+  es: unlockNotesEs,
+}[locale];
 
 /**
  * Global-mean warming vs pre-industrial per season (°C): central estimates for

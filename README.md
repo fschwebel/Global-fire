@@ -2,7 +2,7 @@
 
 **A browser strategy mini-game about fighting forest fires on a warming planet — and about why that fight cannot be won.**
 
-**Play it: <https://fschwebel.github.io/Global-fire/>** — free, no account, ~30 minutes for a full campaign. The interface is in English or French, following your browser's language.
+**Play it: <https://fschwebel.github.io/Global-fire/>** — free, no account, ~30 minutes for a full campaign. The interface is in English, French, or Spanish, following your browser's language.
 
 You run the fire service of one forested valley. In 2026 the job is manageable: a couple of fires, two engines, a quiet summer. You return for one season every five years — 2030, 2035, … 2070 — and each time the climate has turned the dial by another half-decade of projected warming: drier fuel, harder wind, longer seasons, more ignitions. You unlock better tools, and they are never quite enough. The interface grows heavier with you: first you count burnt hectares, then animals, then homes — eventually firefighters, and people.
 
@@ -58,7 +58,7 @@ The ledger grows on its own schedule — a counter you haven't been introduced t
 - **Probabilistic cellular automaton** for fire spread (Moore neighborhood; fuel type × moisture × wind × intensity × wetness), with per-tile fuel and intensity caps, detection delays, call-in radii, and wet timers for fought ground.
 - **Zero runtime dependencies:** plain Canvas 2D rendering, hand-rolled UI, TypeScript strict, Vite, Biome, Vitest. The test suite is mostly *balance invariants* — "unfought fires must matter", "a naive bot must beat doing nothing", "drier seasons burn more" — so retuning is safe.
 - **Persistence:** the campaign saves to localStorage (burn history + towers only; everything else regenerates from the seed). Refresh mid-campaign and the season restarts; refresh at the finale and the finale is still there.
-- **i18n:** every user-facing string lives in `src/ui/i18n.ts` as a typed en/fr catalog — a missing French translation is a compile error.
+- **i18n:** every user-facing string lives in `src/ui/i18n.ts` as a typed en/fr/es catalog — a missing translation is a compile error.
 - **Analytics:** GA4 pageviews plus a handful of progression events (`season_started`, `season_completed`, `campaign_finished`, `unit_lost`, `drought_event`, `about_opened`) to see how far players get. No accounts, nothing else collected.
 - **Deploy:** GitHub Actions builds `main` and publishes to GitHub Pages; the build number in the corner is the commit count.
 
