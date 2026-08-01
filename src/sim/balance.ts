@@ -65,6 +65,15 @@ export const ignitionSchedule = {
   /** Random ignitions sample this many sites and take the most upwind one —
    *  a background fire tends to get the sector as runway under strong wind. */
   windBiasCandidates: 3,
+  /** Random ignitions also prefer ground without burn history — the campaign
+   *  visits new country instead of re-treading its own scars. A fully scarred
+   *  neighbourhood costs as much as this many tiles of downwind position. */
+  coldSpotRadius: 3,
+  coldSpotWeight: 24,
+  /** Scripted fires start near roads (human ignitions). The reach widens by a
+   *  tile every few seasons — later fires start deeper into the backcountry. */
+  siteRoadDist: 3,
+  siteRoadDistWidenEvery: 4,
 };
 
 export const detection = {

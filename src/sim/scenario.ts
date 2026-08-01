@@ -537,9 +537,12 @@ function buildScript(s: GameState, seasonIndex: number, villages: Point[]): Seas
         }
       if (fuelAround < 17) continue;
       if ((compSize[comp[idx(s, x, y)]!] ?? 0) < 150) continue;
+      // Fires start near roads (human ignitions), but the reach widens slowly
+      // with the seasons — later campaigns see fires deeper in the backcountry.
+      const roadDist = IG.siteRoadDist + Math.floor(seasonIndex / IG.siteRoadDistWidenEvery);
       let nearRoad = false;
-      for (let dy = -3; dy <= 3 && !nearRoad; dy++)
-        for (let dx = -3; dx <= 3; dx++)
+      for (let dy = -roadDist; dy <= roadDist && !nearRoad; dy++)
+        for (let dx = -roadDist; dx <= roadDist; dx++)
           if (inActive(s, x + dx, y + dy) && s.grid[idx(s, x + dx, y + dy)]!.type === 'road') {
             nearRoad = true;
             break;
