@@ -124,6 +124,7 @@ const en = {
   nfNoTowers: 'No towers left to place.',
   nfBadTowerGround: "That ground won't take a tower.",
   nfCrewGone: 'The crew is gone this season.',
+  nfCrewBadCut: 'Not vegetation — the cut queue stands.',
 
   // --- Briefing --------------------------------------------------------------------
   degNum: (avg: number) => `≈ +${fmt(avg)} °C`,
@@ -301,6 +302,7 @@ const fr: Catalog = {
   nfNoTowers: 'Plus aucune tour à placer.',
   nfBadTowerGround: 'Ce terrain ne peut pas recevoir de tour.',
   nfCrewGone: 'L’équipe est perdue pour cette saison.',
+  nfCrewBadCut: 'Pas de végétation — la file de coupes est conservée.',
 
   // --- Briefing ------------------------------------------------------------------------------
   degNum: (avg: number) => `≈ +${fmt(avg)} °C`,
@@ -477,6 +479,7 @@ const es: Catalog = {
   nfNoTowers: 'No quedan torres por colocar.',
   nfBadTowerGround: 'Ese terreno no admite una torre.',
   nfCrewGone: 'La cuadrilla se perdió esta temporada.',
+  nfCrewBadCut: 'No es vegetación — la cola de cortes se mantiene.',
 
   // --- Sesión informativa ---------------------------------------------------------------------
   degNum: (avg: number) => `≈ +${fmt(avg)} °C`,

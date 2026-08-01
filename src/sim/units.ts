@@ -471,6 +471,11 @@ export function dispatchCrew(s: GameState, x: number, y: number, crewId?: number
   if (!cuttable(s, x, y)) {
     const speed = T.moveSpeed[cellAt(s, x, y).type];
     if (speed <= 0) return null;
+    // A stray click (a house beside the cut line) must not wipe queued work:
+    // with jobs pending, non-vegetation clicks are discarded. The exceptions
+    // keep the move order meaningful — an empty queue is a plain reposition,
+    // and a crew in danger escapes to any clear tile, dropping everything.
+    if (crew.jobs.length > 0 && crew.dangerTicks <= 0) return null;
     const path = findPath(s, { x: crew.x, y: crew.y }, { x, y });
     if (path.length === 0 && !(crew.x === x && crew.y === y)) return null;
     crew.jobs = [];

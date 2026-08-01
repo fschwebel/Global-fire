@@ -949,10 +949,10 @@ describe('firefighter danger rule', () => {
     expect(s.trucks.length).toBe(2);
   });
 
-  it('a crew ordered to a clear tile drops its cuts and moves (the manual pull-out)', () => {
+  it('a stray non-vegetation click keeps the cut queue; danger makes it the pull-out', () => {
     const s = createSeason(42, 5); // 2050
     const crew = s.crews[0]!;
-    // Queue a cut first, then order the crew onto a road tile.
+    // Queue a cut first, then click a road tile.
     let veg: { x: number; y: number } | null = null;
     outer: for (let dy = -6; dy <= 6; dy++)
       for (let dx = -6; dx <= 6; dx++) {
@@ -966,10 +966,16 @@ describe('firefighter danger rule', () => {
     step(s, [{ type: 'crewCut', x: veg!.x, y: veg!.y }]);
     expect(crew.jobs.length).toBe(1);
 
+    // With work queued and no danger, the misclick is discarded — queue stands.
     const road = s.center; // the crossroads tile is a road
     step(s, [{ type: 'crewCut', x: road.x, y: road.y }]);
+    expect(crew.jobs.length).toBe(1);
+
+    // In danger the same click is the escape order: drop everything and move.
+    crew.dangerTicks = 1;
+    step(s, [{ type: 'crewCut', x: road.x, y: road.y }]);
     expect(crew.jobs.length).toBe(0);
-    for (let i = 0; i < 30 && !(crew.x === road.x && crew.y === road.y); i++) step(s);
+    for (let i = 0; i < 40 && !(crew.x === road.x && crew.y === road.y); i++) step(s);
     expect(crew.x).toBe(road.x);
     expect(crew.y).toBe(road.y);
   });

@@ -315,13 +315,23 @@ mapwrap.addEventListener('click', (ev) => {
       if (state.towersAvailable <= 1) setTool('engine');
       break;
     }
-    case 'crew':
+    case 'crew': {
       if (state.crews.length === 0) {
         hud.notify(L.nfCrewGone);
         break;
       }
+      // Mirror the sim's stray-click rule so the discard is announced, not silent.
+      const cw = state.crews[0];
+      const cell = state.grid[y * state.w + x];
+      const veg =
+        cell && (cell.type === 'dense' || cell.type === 'sparse' || cell.type === 'grass');
+      if (!veg && cw && cw.jobs.length > 0 && cw.dangerTicks <= 0) {
+        hud.notify(L.nfCrewBadCut);
+        break;
+      }
       enqueueOrder({ type: 'crewCut', x, y }, x, y);
       break;
+    }
   }
 });
 
