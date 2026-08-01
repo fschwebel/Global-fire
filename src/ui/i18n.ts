@@ -151,6 +151,7 @@ const en = {
   epitaph1: 'This forest is invented. The trend is not.',
   epitaph2: 'The decades you just defended are the ones we are living in.',
   staticDom: {
+    'paused-chip': '⏸ Paused',
     's-cmd': 'Valley Fire Command — Summer 2026',
     's-welcome':
       'Welcome, recruit — glad to have you on board. Things are getting tense this season.',
@@ -328,6 +329,7 @@ const fr: Catalog = {
   epitaph1: 'Cette forêt est inventée. La tendance, non.',
   epitaph2: 'Les décennies que vous venez de défendre sont celles que nous vivons.',
   staticDom: {
+    'paused-chip': '⏸ En pause',
     's-cmd': 'PC Feux de la Vallée — Été 2026',
     's-welcome':
       'Bienvenue, recrue — heureux de vous compter parmi nous. La saison s’annonce tendue.',
@@ -503,6 +505,7 @@ const es: Catalog = {
   epitaph1: 'Este bosque es inventado. La tendencia, no.',
   epitaph2: 'Las décadas que acabas de defender son las que estamos viviendo.',
   staticDom: {
+    'paused-chip': '⏸ En pausa',
     's-cmd': 'Mando de Incendios del Valle — Verano 2026',
     's-welcome':
       'Te damos la bienvenida, recluta — nos alegra tenerte a bordo. La temporada se anuncia tensa.',

@@ -357,10 +357,13 @@ mapwrap.addEventListener('contextmenu', (ev) => {
 const btnPause = document.getElementById('btn-pause') as HTMLButtonElement;
 const btnPlay = document.getElementById('btn-play') as HTMLButtonElement;
 
+const pausedChip = document.getElementById('paused-chip') as HTMLDivElement;
+
 function setSpeed(speed: number): void {
   loop.speed = speed;
   btnPause.classList.toggle('active', speed === 0);
   btnPlay.classList.toggle('active', speed === 1);
+  pausedChip.hidden = speed !== 0;
 }
 
 btnPause.addEventListener('click', () => setSpeed(0));

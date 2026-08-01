@@ -217,6 +217,29 @@ body {
   cursor: crosshair;
 }
 
+/* The paused badge: alerts own the top-right corner, pause owns the top-left. */
+#paused-chip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(20, 24, 18, 0.85);
+  border-left: 3px solid #e0a020;
+  color: #e8e4da;
+  padding: 4px 10px;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+#paused-chip[hidden] {
+  display: none;
+}
+
+/* Paused gets its own color: the ⏸ button reads amber, never just "active". */
+#timectl #btn-pause.active {
+  background: #55400f;
+  border-color: #e0a020;
+}
+
 #alerts {
   position: absolute;
   top: 8px;
@@ -839,7 +862,8 @@ body {
     max-width: 72%;
   }
 
-  .alert {
+  .alert,
+  #paused-chip {
     font-size: 11px;
     padding: 3px 6px;
   }
