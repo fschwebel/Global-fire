@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Google tag (gtag.js) — direct GA4; game events fire from src/game/analytics.ts -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-DF3SFN8S7Y"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-DF3SFN8S7Y');
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Global Fire</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌲</text></svg>"
+    />
+    <script type="module" crossorigin src="/Global-fire/assets/index-DeVPM7rc.js"></script>
+    <link rel="stylesheet" crossorigin href="/Global-fire/assets/index-BDDJfqOm.css">
+  </head>
+  <body>
+    <div id="app">
+      <div id="topbar">
+        <div id="year"></div>
+        <div id="stats">
+          <span id="hectares">0 ha burnt</span>
+          <span id="animals" hidden></span>
+          <span id="houses" hidden></span>
+          <span id="ffs" hidden></span>
+          <span id="civs" hidden></span>
+        </div>
+        <div id="weather">
+          <span id="windarrow">➤</span>
+          <span id="windspeed"></span>
+          <span id="dryness"></span>
+        </div>
+      </div>
+      <div id="main">
+        <div id="sidebar">
+          <div id="palette">
+            <button id="tool-engine" type="button" class="tool active" title="Dispatch engine — click the map, the nearest engine responds">🚒</button>
+            <button id="tool-evac" type="button" class="tool locked" title="">📢</button>
+            <button id="tool-bomber" type="button" class="tool locked" title="">🛩</button>
+            <button id="tool-tower" type="button" class="tool locked" title="">🗼<span id="tower-count" class="badge" hidden></span></button>
+            <button id="tool-crew" type="button" class="tool locked" title="">⛏</button>
+          </div>
+          <div id="engines"></div>
+        </div>
+        <div id="mapwrap">
+          <canvas id="map"></canvas>
+          <div id="alerts"></div>
+          <div id="paused-chip" hidden>⏸ Paused</div>
+        </div>
+      </div>
+      <div id="bottombar">
+        <div id="selection"></div>
+        <div id="timectl">
+          <button id="btn-pause" type="button">⏸</button>
+          <button id="btn-play" type="button" class="active">▶</button>
+          <div id="seasonbar"><div id="seasonfill"></div></div>
+          <button id="btn-about" type="button">About the game</button>
+        </div>
+      </div>
+      <div id="version"></div>
+      <div id="about" hidden>
+        <div id="about-panel">
+          <h2 id="a-title">About the game</h2>
+          <p id="a-p1">
+            You are not meant to win. Each season follows the IPCC's central warming
+            projections, and each season the fire outgrows the means sent against it.
+            That is not bad balance — it is the point.
+          </p>
+          <p id="a-p2">
+            Real firefighting is the same: once a big fire is running, crews mostly choose
+            what burns last. What works happens before the first spark — tended forests,
+            firebreaks, early detection, and above all limiting the warming itself.
+          </p>
+          <div id="a-links-head">To go further, outside the game:</div>
+          <div id="a-links">
+            <a id="alink-science" href="https://www.ipcc.ch/assessment-report/ar6/" target="_blank" rel="noopener" title="Opens ipcc.ch in a new tab">
+              <span class="label" id="alink-science-label">Understand the science</span>
+              <span class="dest">ipcc.ch ↗</span>
+            </a>
+            <a id="alink-un" href="https://www.unep.org/resources/report/spreading-wildfire-rising-threat-extraordinary-landscape-fires" target="_blank" rel="noopener" title="Opens unep.org in a new tab">
+              <span class="label" id="alink-un-label">The UN wildfire report</span>
+              <span class="dest">unep.org ↗</span>
+            </a>
+            <a id="alink-home" href="https://www.nfpa.org/education-and-research/wildfire/firewise-usa" target="_blank" rel="noopener" title="Opens nfpa.org in a new tab">
+              <span class="label" id="alink-home-label">Prepare your home</span>
+              <span class="dest">nfpa.org ↗</span>
+            </a>
+          </div>
+          <button id="btn-about-close" type="button">Close</button>
+        </div>
+      </div>
+      <div id="splash" hidden>
+        <div id="s-cmd">Valley Fire Command — Summer 2026</div>
+        <h1 id="s-title">Global Fire</h1>
+        <p id="s-welcome">
+          Welcome, recruit — glad to have you on board. Things are getting tense this season.
+        </p>
+        <button id="btn-splash" type="button">Report for duty</button>
+      </div>
+      <div id="briefing" hidden>
+        <h2 id="b-year"></h2>
+        <section id="b-climate" hidden>
+          <div id="b-climate-head">The climate this season</div>
+          <div id="b-degrees">
+            <span id="b-deg-num"></span>
+            <span id="b-deg-label">global average, above pre-industrial</span>
+          </div>
+          <dl id="b-impacts">
+            <div><dt id="b-drought-label">Once-a-decade drought</dt><dd id="b-drought"></dd></div>
+            <div><dt id="b-heat-label">Once-a-decade heatwave</dt><dd id="b-heat"></dd></div>
+            <div class="peak"><dt id="b-peak-label">Hottest summer days here</dt><dd id="b-peak"></dd></div>
+          </dl>
+          <div id="b-climate-note">
+            A global average understates a fire season — land warms faster, extremes faster still.
+          </div>
+        </section>
+        <p id="b-climate-src" hidden>
+          Source: IPCC Sixth Assessment Report (AR6) — central estimates, middle-of-the-road
+          pathway (≈SSP2-4.5)
+        </p>
+        <p id="b-growth" hidden>
+          The department has widened your sector — more forest, more people, yours to protect.
+        </p>
+        <p id="b-unlock" hidden></p>
+        <p id="b-fact"></p>
+        <button id="btn-begin" type="button">Begin season</button>
+      </div>
+      <div id="debrief" hidden>
+        <h2 id="d-title">Season over — the rains arrive</h2>
+        <div id="report"></div>
+        <div id="d-final" hidden>
+          <div id="d-verdict">You never stopped the fire. You decided what survived it.</div>
+          <table id="d-compare">
+            <thead>
+              <tr><th></th><th id="c-head-you">Your 44 years</th><th id="c-head-not">Left unfought</th></tr>
+            </thead>
+            <tbody>
+              <tr><td id="c-row-ha">Forest burnt</td><td id="c-ha-you"></td><td id="c-ha-not"></td></tr>
+              <tr><td id="c-row-an">Animals killed</td><td id="c-an-you"></td><td id="c-an-not"></td></tr>
+              <tr><td id="c-row-ho">Homes lost</td><td id="c-ho-you"></td><td id="c-ho-not"></td></tr>
+              <tr><td id="c-row-pe">People lost</td><td id="c-pe-you"></td><td id="c-pe-not"></td></tr>
+            </tbody>
+          </table>
+          <div id="d-saved"></div>
+          <div id="d-cost" hidden></div>
+          <p id="d-epitaph">
+            This forest is invented. The trend is not.<br />
+            The decades you just defended are the ones we are living in.
+          </p>
+          <div id="d-links-head">To go deeper — real reports and resources, outside the game:</div>
+          <div id="d-links">
+            <a id="link-science" href="https://www.ipcc.ch/assessment-report/ar6/" target="_blank" rel="noopener" title="Opens ipcc.ch in a new tab">
+              <span class="label" id="link-science-label">Understand the science</span>
+              <span class="dest">ipcc.ch ↗</span>
+            </a>
+            <a id="link-un" href="https://www.unep.org/resources/report/spreading-wildfire-rising-threat-extraordinary-landscape-fires" target="_blank" rel="noopener" title="Opens unep.org in a new tab">
+              <span class="label" id="link-un-label">The UN wildfire report</span>
+              <span class="dest">unep.org ↗</span>
+            </a>
+            <a id="link-home" href="https://www.nfpa.org/education-and-research/wildfire/firewise-usa" target="_blank" rel="noopener" title="Opens nfpa.org in a new tab">
+              <span class="label" id="link-home-label">Prepare your home</span>
+              <span class="dest">nfpa.org ↗</span>
+            </a>
+          </div>
+        </div>
+        <p id="d-campaign"></p>
+        <button id="btn-restart" type="button">Continue</button>
+        <button id="btn-toohard" type="button">Too hard?</button>
+      </div>
+    </div>
+  </body>
+</html>
