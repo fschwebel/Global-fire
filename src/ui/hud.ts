@@ -28,13 +28,15 @@ export function statLine(stats: Stats, year: number): string {
 function engineStatus(s: GameState, t: Truck): string {
   if (t.dangerTicks > 0) return L.statusDanger;
   if (t.path.length > 0) return L.statusEnRoute;
-  for (let dy = -1; dy <= 1; dy++)
-    for (let dx = -1; dx <= 1; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const nx = t.x + dx;
-      const ny = t.y + dy;
-      if (inActive(s, nx, ny) && cellAt(s, nx, ny).state === 'burning') return L.statusFighting;
-    }
+  // A dry engine cannot fight — never claim it is.
+  if (t.water > 0)
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const nx = t.x + dx;
+        const ny = t.y + dy;
+        if (inActive(s, nx, ny) && cellAt(s, nx, ny).state === 'burning') return L.statusFighting;
+      }
   if (t.water < T.waterCapacity) {
     let nearWater = false;
     for (let dy = -1; dy <= 1 && !nearWater; dy++)
@@ -45,6 +47,7 @@ function engineStatus(s: GameState, t: Truck): string {
         }
     if (nearWater) return L.statusRefilling;
   }
+  if (t.water <= 0) return L.statusTankEmpty;
   return L.statusStandingBy;
 }
 

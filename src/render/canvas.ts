@@ -336,6 +336,24 @@ export class Renderer {
       ctx.fillRect(px + 3, py + TILE - 4, TILE - 6, 3);
       ctx.fillStyle = '#4a90d9';
       ctx.fillRect(px + 3, py + TILE - 4, (TILE - 6) * (t.water / T.waterCapacity), 3);
+      // Dry tank: an amber droplet over the rig — the state with teeth, shown
+      // where the player's eyes are. Warning amber; red stays the danger rule's.
+      if (t.water <= 0) {
+        const dx = px + TILE / 2;
+        const dy = Math.max(6, py - 5);
+        ctx.globalAlpha = 0.65 + 0.3 * Math.sin(now / 260);
+        ctx.beginPath();
+        ctx.moveTo(dx, dy - 8);
+        ctx.quadraticCurveTo(dx + 4.5, dy - 3, dx + 3.2, dy);
+        ctx.arc(dx, dy, 3.2, 0, Math.PI, false);
+        ctx.quadraticCurveTo(dx - 4.5, dy - 3, dx, dy - 8);
+        ctx.fillStyle = '#e0a020';
+        ctx.fill();
+        ctx.strokeStyle = '#10160f';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
     }
 
     // Evacuations: a ring around the village — amber while moving, grey once clear.
