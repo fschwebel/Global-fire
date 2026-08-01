@@ -376,7 +376,7 @@ export const seasons: SeasonParams[] = [
     year: 2070,
     t: 9,
     dryness: 0.85,
-    windStr: 1.1,
+    windStr: 1.2,
     scriptedIgnitions: 6,
     randomIgnitionRate: 0.004,
     seasonLen: 420,
